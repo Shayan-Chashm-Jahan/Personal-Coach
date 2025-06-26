@@ -1,0 +1,19 @@
+[project]
+name = "personal-coach"
+version = "0.1.0"
+description = "AI Personal Coach Application"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "openai>=1.91.0",
+    "google-auth>=2.40.0",
+    "python-dotenv>=1.0.0",
+    "sqlalchemy>=2.0.0",
+    "passlib>=1.7.4",
+    "python-jose>=3.3.0",
+    "python-multipart>=0.0.6",
+    "bcrypt>=4.0.0",
+    "email-validator>=2.2.0",
+]
