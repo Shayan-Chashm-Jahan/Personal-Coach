@@ -1,4 +1,3 @@
-import json
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,15 +29,17 @@ class ConfigManager:
         self._load_prompts()
     
     def _load_prompts(self) -> None:
-        prompts_path = Path(__file__).parent / "prompts.json"
+        prompts_dir = Path(__file__).parent / "prompts"
         try:
-            with open(prompts_path, 'r') as f:
-                prompts = json.load(f)
-                self.system_prompt = prompts["system_prompt"]
-                self.conversation_summary_prompt = prompts["conversation_summary_prompt"]
-                self.memory_extraction_prompt = prompts["memory_extraction_prompt"]
-        except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-            raise ValueError(f"Failed to load prompts from prompts.json: {e}")
+            self.system_prompt = self._read_prompt_file(prompts_dir / "system_prompt.md")
+            self.conversation_summary_prompt = self._read_prompt_file(prompts_dir / "conversation_summary.md")
+            self.memory_extraction_prompt = self._read_prompt_file(prompts_dir / "memory_extraction.md")
+        except FileNotFoundError as e:
+            raise ValueError(f"Failed to load prompt file: {e}")
+    
+    def _read_prompt_file(self, file_path: Path) -> str:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read().strip()
     
     def get_model_base_url(self) -> str:
         return (
