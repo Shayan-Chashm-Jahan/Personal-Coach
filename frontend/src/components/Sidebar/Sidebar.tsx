@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 interface Chat {
   id: string
@@ -15,6 +15,7 @@ interface SidebarProps {
   currentChatId: string | null
   setCurrentChatId: (chatId: string | null) => void
   deleteChat: (chatId: string) => Promise<void>
+  onContextMenu: (e: React.MouseEvent, url: string, onDelete?: () => void) => void
 }
 
 const SECTIONS = {
@@ -30,18 +31,37 @@ export default function Sidebar({
   chats,
   currentChatId,
   setCurrentChatId,
-  deleteChat
+  deleteChat,
+  onContextMenu
 }: SidebarProps) {
   const navigate = useNavigate()
   
+  const getRouteForSection = (section: string): string => {
+    switch (section) {
+      case SECTIONS.CHAT:
+        return '/chat'
+      case SECTIONS.GOALS:
+        return '/goals'
+      case SECTIONS.NOTES:
+        return '/coach-notes'
+      default:
+        return '/chat'
+    }
+  }
+
   const renderNavigationItem = (section: string, label: string) => (
-    <button 
+    <Link 
       key={section}
+      to={getRouteForSection(section)}
       className={`nav-item ${activeSection === section ? 'active' : ''}`}
-      onClick={() => setActiveSection(section)}
+      onClick={(e) => {
+        e.preventDefault()
+        setActiveSection(section)
+      }}
+      onContextMenu={(e) => onContextMenu(e, getRouteForSection(section))}
     >
       {label}
-    </button>
+    </Link>
   )
 
   const handleChatClick = (chatId: string) => {
@@ -62,22 +82,18 @@ export default function Sidebar({
         </div>
         <div className="chat-items">
           {nonEmptyChats.map(chat => (
-            <div 
+            <Link 
               key={chat.id}
+              to={`/chat/${chat.id}`}
               className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}
-              onClick={() => handleChatClick(chat.id)}
+              onClick={(e) => {
+                e.preventDefault()
+                handleChatClick(chat.id)
+              }}
+              onContextMenu={(e) => onContextMenu(e, `/chat/${chat.id}`, () => deleteChat(chat.id))}
             >
               <div className="chat-item-title">{chat.title}</div>
-              <button 
-                className="chat-delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  deleteChat(chat.id)
-                }}
-              >
-                ×
-              </button>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

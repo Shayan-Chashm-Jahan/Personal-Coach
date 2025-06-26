@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import ChatSection from './components/Chat/ChatSection'
 import GoalsSection from './components/Goals/GoalsSection'
 import NotesSection from './components/Notes/NotesSection'
 import Sidebar from './components/Sidebar/Sidebar'
+import ContextMenu from './components/ContextMenu/ContextMenu'
+import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog'
 import './App.css'
 
 const API_BASE_URL = 'http://localhost:8000'
@@ -62,6 +64,8 @@ function AppRoutes() {
   const [chats, setChats] = useState<Chat[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [chatsLoading, setChatsLoading] = useState<boolean>(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; url: string; onDelete?: () => void } | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; chatId?: string; chatTitle?: string }>({ isOpen: false })
 
   useEffect(() => {
     if (activeSection === SECTIONS.NOTES) {
@@ -89,6 +93,13 @@ function AppRoutes() {
 
   useEffect(() => {
     checkAuthStatus()
+    
+    const handleClickOutside = () => {
+      setContextMenu(null)
+    }
+    
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
   useEffect(() => {
@@ -429,6 +440,15 @@ function AppRoutes() {
     return title || 'New Chat'
   }
 
+  const confirmDeleteChat = (chatId: string) => {
+    const chat = chats.find(c => c.id === chatId)
+    setConfirmDialog({
+      isOpen: true,
+      chatId,
+      chatTitle: chat?.title || 'this chat'
+    })
+  }
+
   const deleteChat = async (chatId: string): Promise<void> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
@@ -457,6 +477,13 @@ function AppRoutes() {
       console.error('Failed to delete chat:', error)
       showNotification('Failed to delete chat', 'error')
     }
+  }
+
+  const handleConfirmDelete = () => {
+    if (confirmDialog.chatId) {
+      deleteChat(confirmDialog.chatId)
+    }
+    setConfirmDialog({ isOpen: false })
   }
 
   const fetchChatMessages = async (chatId: string): Promise<void> => {
@@ -573,6 +600,17 @@ function AppRoutes() {
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id))
     }, 5000)
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, url: string, onDelete?: () => void) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, url, onDelete })
+  }
+
+  const handleOpenInNewTab = () => {
+    if (contextMenu) {
+      window.open(contextMenu.url, '_blank')
+    }
   }
 
   const getSectionTitle = (): string => {
@@ -721,17 +759,24 @@ function AppRoutes() {
       <div className="section-header">
         <h1>{getSectionTitle()}</h1>
         {activeSection === SECTIONS.CHAT && (
-          <button 
-            onClick={() => createChat()}
+          <Link 
+            to="/chat"
+            onClick={async (e) => {
+              e.preventDefault()
+              const newChatId = await createChat()
+              if (newChatId) {
+                navigate(`/chat/${newChatId}`)
+              }
+            }}
+            onContextMenu={(e) => handleContextMenu(e, '/chat')}
             className="header-new-chat-button"
-            disabled={chatsLoading}
             title="New Chat"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
-          </button>
+          </Link>
         )}
       </div>
       {renderActiveSection()}
@@ -766,7 +811,7 @@ function AppRoutes() {
   )
 
   return (
-    <div className="app-container">
+    <div className="app-container" onContextMenu={(e) => e.preventDefault()}>
       <Sidebar
         activeSection={activeSection}
         setActiveSection={handleSectionChange}
@@ -774,10 +819,30 @@ function AppRoutes() {
         chats={chats}
         currentChatId={currentChatId}
         setCurrentChatId={handleChatSelect}
-        deleteChat={deleteChat}
+        deleteChat={confirmDeleteChat}
+        onContextMenu={handleContextMenu}
       />
       {renderMainContent()}
       {renderNotifications()}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onOpenNewTab={handleOpenInNewTab}
+          onClose={() => setContextMenu(null)}
+          onDelete={contextMenu.onDelete}
+        />
+      )}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Delete Chat"
+        message={`Are you sure you want to delete "${confirmDialog.chatTitle}"? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDialog({ isOpen: false })}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+      />
     </div>
   )
 }
