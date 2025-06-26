@@ -34,12 +34,10 @@ interface ChatSectionProps {
   saveMessage: (message: Message) => Promise<void>;
   messagesLoading?: boolean;
   clearChat: () => void;
-  chats: Chat[];
   currentChatId: string | null;
   createChat: (title?: string) => Promise<string | null>;
-  chatsLoading: boolean;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
-  generateChatTitle: (message: string) => string;
+  generateChatTitle: (message: string) => Promise<string>;
 }
 
 const API_BASE_URL = "http://localhost:8000";
@@ -57,10 +55,8 @@ export default function ChatSection({
   saveMessage,
   messagesLoading = false,
   clearChat,
-  chats,
   currentChatId,
   createChat,
-  chatsLoading,
   updateChatTitle,
   generateChatTitle,
 }: ChatSectionProps) {
@@ -216,25 +212,23 @@ export default function ChatSection({
 
     const messageText = inputValue;
     const conversationHistory = buildConversationHistory();
-    const isFirstMessage = messages.length === 0;
-
     let chatId = currentChatId;
+    const isNewChat = !chatId;
 
     if (!chatId) {
       chatId = await createChat();
       if (!chatId) return;
     }
 
+    const isFirstMessageInChat = messages.length === 0;
+
     setInputValue("");
     setIsLoading(true);
     await addMessage(messageText, "user");
 
-    if (isFirstMessage && chatId) {
-      const currentChat = chats.find(chat => chat.id === chatId);
-      if (currentChat && currentChat.title === 'New Chat') {
-        const newTitle = generateChatTitle(messageText);
-        await updateChatTitle(chatId, newTitle);
-      }
+    if ((isNewChat || isFirstMessageInChat) && chatId) {
+      const newTitle = await generateChatTitle(messageText);
+      await updateChatTitle(chatId, newTitle);
     }
 
     try {

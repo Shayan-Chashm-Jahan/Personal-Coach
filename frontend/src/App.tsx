@@ -86,10 +86,14 @@ function AppRoutes() {
   }, [isAuthenticated, currentChatId])
 
   useEffect(() => {
-    if (isAuthenticated && activeSection === SECTIONS.CHAT && chats.length === 0 && !chatsLoading) {
-      createChat()
+    if (isAuthenticated && activeSection === SECTIONS.CHAT && chats.length === 0 && !chatsLoading && !currentChatId) {
+      createChat().then(newChatId => {
+        if (newChatId) {
+          navigate(`/chat/${newChatId}`)
+        }
+      })
     }
-  }, [isAuthenticated, activeSection, chats.length, chatsLoading])
+  }, [isAuthenticated, activeSection, chats.length, chatsLoading, currentChatId, navigate])
 
   useEffect(() => {
     checkAuthStatus()
@@ -413,13 +417,35 @@ function AppRoutes() {
         setChats(prev => prev.map(chat => 
           chat.id === chatId ? { ...chat, title } : chat
         ))
+      } else {
+        showNotification('Failed to update chat title', 'error')
       }
     } catch (error) {
       showNotification('Failed to update chat title', 'error')
     }
   }
 
-  const generateChatTitle = (message: string): string => {
+  const generateChatTitle = async (message: string): Promise<string> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chats/generate-title`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({ message })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        return data.title
+      } else if (response.status === 401) {
+        logout()
+      }
+    } catch (error) {
+      showNotification('Failed to generate title', 'error')
+    }
+    
     const words = message.trim().split(' ').slice(0, 5)
     let title = words.join(' ')
     if (title.length > 30) {
@@ -445,14 +471,15 @@ function AppRoutes() {
       })
 
       if (response.ok) {
-        setChats(prev => prev.filter(chat => chat.id !== chatId))
+        const remainingChats = chats.filter(chat => chat.id !== chatId)
+        setChats(remainingChats)
+        
         if (currentChatId === chatId) {
-          const remainingChats = chats.filter(chat => chat.id !== chatId)
-          if (remainingChats.length > 0) {
-            setCurrentChatId(remainingChats[0].id)
-          } else {
-            setCurrentChatId(null)
-            setMessages([])
+          setCurrentChatId(null)
+          setMessages([])
+          const newChatId = await createChat()
+          if (newChatId) {
+            navigate(`/chat/${newChatId}`)
           }
         }
         showNotification('Chat deleted', 'success')
@@ -486,6 +513,9 @@ function AppRoutes() {
         setMessages(data.messages || [])
       } else if (response.status === 401) {
         logout()
+      } else if (response.status === 404) {
+        setMessages([])
+        setCurrentChatId(null)
       } else {
         showNotification('Failed to fetch messages', 'error')
       }
@@ -636,10 +666,8 @@ function AppRoutes() {
             saveMessage={saveMessage}
             messagesLoading={messagesLoading}
             clearChat={clearChat}
-            chats={chats}
             currentChatId={currentChatId}
             createChat={createChat}
-            chatsLoading={chatsLoading}
             updateChatTitle={updateChatTitle}
             generateChatTitle={generateChatTitle}
           />
@@ -677,10 +705,8 @@ function AppRoutes() {
             saveMessage={saveMessage}
             messagesLoading={messagesLoading}
             clearChat={clearChat}
-            chats={chats}
             currentChatId={currentChatId}
             createChat={createChat}
-            chatsLoading={chatsLoading}
             updateChatTitle={updateChatTitle}
             generateChatTitle={generateChatTitle}
           />
@@ -739,7 +765,7 @@ function AppRoutes() {
     <div className="main-content">
       <div className="section-header">
         <h1>{getSectionTitle()}</h1>
-        {activeSection === SECTIONS.CHAT && (
+        {activeSection === SECTIONS.CHAT && messages.length > 0 && (
           <Link 
             to="/chat"
             onClick={async (e) => {
