@@ -8,9 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Dict, List, Any
 
-import google.auth.transport.requests
-import openai
-from google.auth import default
+from google import genai
+from google.genai import types
+from google.genai.types import HttpOptions
 from sqlalchemy.orm import Session
 
 from config import config_manager
@@ -33,48 +33,29 @@ class LLMStreamingClient:
             return
             
         self.client = None
-        self.credentials = None
-        self.token_expiry = 0
         self.summary_storage_path = Path(__file__).parent / "conversation_summary.json"
         self.max_history_length = config_manager.max_history_length
         self._summary_cache = None
         self._summary_cache_time = 0
         self._initialized = True
     
-    def _get_fresh_credentials(self):
-        current_time = time.time()
-        if self.credentials is None or current_time >= self.token_expiry - config_manager.credential_refresh_buffer:
-            self.credentials, _ = default(
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
-            self.credentials.refresh(google.auth.transport.requests.Request())
-            self.token_expiry = current_time + 3600
-        return self.credentials
-    
-    def _get_client(self) -> openai.OpenAI:
+    def _get_client(self) -> genai.Client:
         if self.client is None:
-            credentials = self._get_fresh_credentials()
-            self.client = openai.OpenAI(
-                base_url=config_manager.get_model_base_url(),
-                api_key=credentials.token,
-                timeout=30.0,
-                max_retries=2
+            vertex_config = config_manager.get_vertex_ai_config()
+            self.client = genai.Client(
+                http_options=HttpOptions(api_version="v1"),
+                **vertex_config
             )
-        else:
-            credentials = self._get_fresh_credentials()
-            if self.client.api_key != credentials.token:
-                self.client.api_key = credentials.token
-        
         return self.client
     
     def _normalize_role(self, role: str) -> str:
         role_mapping = {
-            "model": "assistant",
-            "assistant": "assistant", 
+            "assistant": "model",
+            "system": "user",
             "user": "user",
-            "system": "system"
+            "model": "model"
         }
-        return role_mapping.get(role, role)
+        return role_mapping.get(role, "user")
     
     def _load_conversation_summary(self) -> Optional[str]:
         current_time = time.time()
@@ -109,25 +90,21 @@ class LLMStreamingClient:
             [f"{item['role']}: {item['content']}" for item in history]
         )
         
-        summary_messages = [
-            {
-                "role": "user", 
-                "content": config_manager.conversation_summary_prompt.format(
-                    history_text=history_text
-                )
-            }
-        ]
-        
-        client = self._get_client()
-        response = client.chat.completions.create(
-            model=config_manager.model_name,
-            messages=summary_messages,
-            temperature=0.3,
-            max_tokens=500,
-            stream=False
+        summary_prompt = config_manager.conversation_summary_prompt.format(
+            history_text=history_text
         )
         
-        return response.choices[0].message.content
+        client = self._get_client()
+        response = client.models.generate_content(
+            model=config_manager.model_name,
+            contents=summary_prompt,
+            config={
+                "temperature": 0.3,
+                "maxOutputTokens": 500
+            }
+        )
+        
+        return response.text
     
     def _extract_list_from_response(self, content: str) -> List[str]:
         first_bracket = content.find('[')
@@ -154,27 +131,23 @@ class LLMStreamingClient:
 
         try:
             client = self._get_client()
-            response = client.chat.completions.create(
+            response = client.models.generate_content(
                 model=config_manager.model_name,
-                messages=[{"role": "user", "content": memory_prompt}],
-                temperature=0.2,
-                max_tokens=200,
-                stream=False
+                contents=memory_prompt,
+                config={
+                    "temperature": 0.2,
+                    "maxOutputTokens": 200
+                }
             )
             
-            content = response.choices[0].message.content.strip()
+            content = response.text.strip()
             
             if content.upper() == "NONE" or not content:
                 return []
             
             return self._extract_list_from_response(content)
             
-        except (openai.APIError, openai.APIConnectionError, openai.RateLimitError) as e:
-            print(f"OpenAI API error in _extract_memories: {str(e)}")
-            return []
-        except Exception as e:
-            print(f"Unexpected error in _extract_memories: {str(e)}")
-            print(f"Traceback: {traceback.format_exc()}")
+        except Exception:
             return []
     
     def save_memories_to_db(self, memory_list: List[str], user_id: int, db: Session) -> None:
@@ -193,7 +166,6 @@ class LLMStreamingClient:
         db.commit()
     
     def _build_goals_context(self, user_id: int, db: Session) -> Optional[str]:
-        """Build context string from user's active goals"""
         try:
             from models import Goal
             goals = db.query(Goal).filter(
@@ -207,12 +179,6 @@ class LLMStreamingClient:
             context_parts = ["=== USER'S CURRENT GOALS ==="]
             for goal in goals:
                 goal_text = f"• {goal.description}"
-                if goal.category:
-                    goal_text += f" (Category: {goal.category})"
-                if goal.priority:
-                    goal_text += f" [Priority: {goal.priority}]"
-                if goal.target_date:
-                    goal_text += f" [Target: {goal.target_date}]"
                 context_parts.append(goal_text)
             
             context_parts.append("=== END GOALS ===")
@@ -221,7 +187,6 @@ class LLMStreamingClient:
             return None
     
     def _build_memories_context(self, user_id: int, db: Session) -> Optional[str]:
-        """Build context string from user's coach memories/notes"""
         try:
             from models import Memory
             memories = db.query(Memory).filter(
@@ -240,63 +205,57 @@ class LLMStreamingClient:
         except Exception:
             return None
     
-    def _build_messages(
+    def _build_system_instruction(
+        self,
+        user_id: Optional[int] = None,
+        db: Optional[Session] = None
+    ) -> str:
+        system_parts = [config_manager.system_prompt]
+        
+        if user_id and db:
+            goals_context = self._build_goals_context(user_id, db)
+            if goals_context:
+                system_parts.append(goals_context)
+            
+            memories_context = self._build_memories_context(user_id, db)
+            if memories_context:
+                system_parts.append(memories_context)
+        
+        existing_summary = self._load_conversation_summary()
+        if existing_summary:
+            system_parts.append(f"Previous conversation summary: {existing_summary}")
+        
+        return "\n\n".join(system_parts)
+    
+    def _build_contents(
         self, 
         text: str, 
         history: Optional[List[Dict[str, str]]],
         user_id: Optional[int] = None,
         db: Optional[Session] = None
     ) -> List[Dict[str, str]]:
-        messages = []
-        
-        messages.append({
-            "role": "system", 
-            "content": config_manager.system_prompt
-        })
-        
-        # Add user's goals and memories as context if available
-        if user_id and db:
-            # Add user's goals as context
-            goals_context = self._build_goals_context(user_id, db)
-            if goals_context:
-                messages.append({
-                    "role": "system",
-                    "content": goals_context
-                })
-            
-            # Add user's memories (coach notes) as context
-            memories_context = self._build_memories_context(user_id, db)
-            if memories_context:
-                messages.append({
-                    "role": "system",
-                    "content": memories_context
-                })
-        
-        existing_summary = self._load_conversation_summary()
-        if existing_summary:
-            messages.append({
-                "role": "system", 
-                "content": f"Previous conversation summary: {existing_summary}"
-            })
+        contents = []
         
         if history and len(history) > config_manager.history_truncate_threshold:
             full_history = history.copy()
             summary = self._create_summary(full_history[:-30])
             self._save_conversation_summary(summary)
-            
             history = history[-config_manager.history_truncate_threshold:]
-            messages.append({
-                "role": "system", 
-                "content": f"Conversation summary: {summary}"
-            })
         
         if history:
             for item in history:
                 normalized_role = self._normalize_role(item["role"])
-                messages.append({"role": normalized_role, "content": item["content"]})
+                contents.append({
+                    "role": normalized_role,
+                    "parts": [{"text": item["content"]}]
+                })
         
-        messages.append({"role": "user", "content": text})
-        return messages
+        contents.append({
+            "role": "user",
+            "parts": [{"text": text}]
+        })
+        
+        return contents
     
     def stream_response(
         self, 
@@ -306,37 +265,29 @@ class LLMStreamingClient:
         db: Optional[Session] = None
     ) -> Iterator[str]:
         try:
-            print(f"Building messages for text: {text[:50]}...")
-            messages = self._build_messages(text, history, user_id, db)
-            print(f"Built {len(messages)} messages")
-            
-            print("Getting LLM client...")
             client = self._get_client()
-            print("Client obtained, making API call...")
             
-            response = client.chat.completions.create(
+            system_instruction = self._build_system_instruction(user_id, db)
+            contents = self._build_contents(text, history, user_id, db)
+            
+            response_stream = client.models.generate_content_stream(
                 model=config_manager.model_name,
-                messages=messages,
-                temperature=config_manager.temperature,
-                max_tokens=config_manager.max_tokens,
-                stream=True
+                contents=contents,
+                config={
+                    "tools": [{"googleSearch": {}}],
+                    "systemInstruction": {
+                        "parts": [{"text": system_instruction}]
+                    },
+                    "temperature": config_manager.temperature,
+                    "maxOutputTokens": config_manager.max_tokens
+                }
             )
-            print("API call successful, streaming response...")
             
-            full_response = ""
-            chunk_count = 0
-            for chunk in response:
-                if chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    full_response += content
-                    chunk_count += 1
-                    yield content
-            
-            print(f"Streaming completed. Chunks: {chunk_count}, Total length: {len(full_response)}")
+            for chunk in response_stream:
+                if chunk.text:
+                    yield chunk.text
             
         except Exception as e:
-            print(f"Error in stream_response: {str(e)}")
-            print(f"Traceback: {traceback.format_exc()}")
             raise
 
 

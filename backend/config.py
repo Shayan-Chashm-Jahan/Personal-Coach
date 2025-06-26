@@ -11,7 +11,7 @@ class ConfigManager:
         if not self.project_id:
             raise ValueError("GCP_PROJECT_ID environment variable is required")
         
-        self.model_name = "google/gemini-2.0-flash"
+        self.model_name = "gemini-2.0-flash"
         self.location = "us-central1"
         self.temperature = 0.7
         self.max_tokens = 2048
@@ -41,11 +41,13 @@ class ConfigManager:
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read().strip()
     
-    def get_model_base_url(self) -> str:
-        return (
-            f"https://{self.location}-aiplatform.googleapis.com/v1/"
-            f"projects/{self.project_id}/locations/{self.location}/endpoints/openapi"
-        )
+    def get_vertex_ai_config(self) -> dict:
+        """Get Vertex AI configuration for Google GenAI client"""
+        return {
+            "vertexai": True,
+            "project": self.project_id,
+            "location": self.location
+        }
 
 
 config_manager = ConfigManager()

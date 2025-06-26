@@ -66,10 +66,7 @@ class Goal(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=False)
-    category = Column(String(50), nullable=True)
-    priority = Column(String(10), nullable=True)
     status = Column(String(20), default="Active", nullable=False)
-    target_date = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     

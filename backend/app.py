@@ -43,12 +43,12 @@ class MessageCreate(BaseModel):
 class ChatCreate(BaseModel):
     title: str
 
+class TitleGenerateRequest(BaseModel):
+    message: str
+
 class GoalCreate(BaseModel):
     title: str
     description: str
-    category: Optional[str] = None
-    priority: Optional[str] = None
-    target_date: Optional[str] = None
 
 
 security = HTTPBearer()
@@ -140,6 +140,10 @@ class ChatAPI:
         @self.app.get("/api/chats/{chat_id}/messages")
         async def get_chat_messages_route(chat_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_chat_messages(chat_id, current_user, db)
+            
+        @self.app.post("/api/chats/generate-title")
+        async def generate_title_route(request: TitleGenerateRequest, current_user: User = Depends(self.get_current_user)):
+            return await self.generate_title(request)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -397,10 +401,7 @@ class ChatAPI:
                     "id": str(goal.id),
                     "title": goal.title,
                     "description": goal.description,
-                    "category": goal.category,
-                    "priority": goal.priority,
                     "status": goal.status,
-                    "targetDate": goal.target_date,
                     "createdAt": goal.created_at.isoformat()
                 }
                 for goal in user_goals
@@ -419,9 +420,6 @@ class ChatAPI:
             new_goal = Goal(
                 title=goal_data.title,
                 description=goal_data.description,
-                category=goal_data.category,
-                priority=goal_data.priority,
-                target_date=goal_data.target_date,
                 user_id=current_user.id
             )
             db.add(new_goal)
@@ -432,10 +430,7 @@ class ChatAPI:
                 "id": str(new_goal.id),
                 "title": new_goal.title,
                 "description": new_goal.description,
-                "category": new_goal.category,
-                "priority": new_goal.priority,
                 "status": new_goal.status,
-                "targetDate": new_goal.target_date,
                 "createdAt": new_goal.created_at.isoformat()
             }
         except Exception as e:
@@ -488,10 +483,7 @@ class ChatAPI:
                 "id": str(goal.id),
                 "title": goal.title,
                 "description": goal.description,
-                "category": goal.category,
-                "priority": goal.priority,
                 "status": goal.status,
-                "targetDate": goal.target_date,
                 "createdAt": goal.created_at.isoformat()
             }
         except HTTPException:
@@ -636,6 +628,48 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+    
+    async def generate_title(self, request: TitleGenerateRequest):
+        try:
+            prompt_path = "prompts/title_generation.md"
+            try:
+                with open(prompt_path, "r") as f:
+                    prompt_template = f.read()
+            except FileNotFoundError:
+                raise HTTPException(status_code=500, detail="Title generation prompt not found")
+            
+            prompt = prompt_template.format(user_message=request.message)
+            
+            response = llm_client._get_client().models.generate_content(
+                model=config_manager.model_name,
+                contents=prompt,
+                config={
+                    "maxOutputTokens": 20,
+                    "temperature": 0.7
+                }
+            )
+            
+            title = response.text.strip()
+            
+            if title.startswith('"') and title.endswith('"'):
+                title = title[1:-1]
+            if title.startswith("'") and title.endswith("'"):
+                title = title[1:-1]
+            
+            if not title or len(title) > 50:
+                words = request.message.split()[:5]
+                title = " ".join(words)
+                if len(title) > 30:
+                    title = title[:27] + "..."
+            
+            return {"title": title}
+            
+        except Exception:
+            words = request.message.split()[:5]
+            title = " ".join(words)
+            if len(title) > 30:
+                title = title[:27] + "..."
+            return {"title": title}
 
 
 chat_api = ChatAPI()
