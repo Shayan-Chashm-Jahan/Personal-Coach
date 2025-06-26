@@ -53,7 +53,7 @@ export default function ChatSection({
   updateChatTitle,
   generateChatTitle,
 }: ChatSectionProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -68,6 +68,12 @@ export default function ChatSection({
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, messagesLoading]);
+
+  useEffect(() => {
+    if (inputRef.current && inputValue === "") {
+      inputRef.current.style.height = 'auto';
+    }
+  }, [inputValue]);
 
   const buildConversationHistory = (): HistoryItem[] => {
     return messages.map((msg) => ({
@@ -251,10 +257,25 @@ export default function ChatSection({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setInputValue(e.target.value);
+    
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    const maxHeight = 120; // Maximum height in pixels (about 6 lines)
+    
+    if (scrollHeight <= maxHeight) {
+      textarea.style.height = scrollHeight + 'px';
+    } else {
+      textarea.style.height = maxHeight + 'px';
     }
   };
 
@@ -281,7 +302,7 @@ export default function ChatSection({
               </div>
             )
           ) : (
-            message.text
+            <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
           )}
         </div>
         <div className="message-timestamp">
@@ -298,15 +319,16 @@ export default function ChatSection({
   const renderChatInput = () => (
     <div className="input-container">
       <div className="input-field">
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
           className="message-input"
           disabled={isLoading}
+          rows={1}
+          style={{ resize: 'none', overflow: 'hidden' }}
         />
         <button
           onClick={sendMessage}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Goal {
   id: string
@@ -24,6 +24,26 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
   })
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; goalId?: string; goalDescription?: string }>({ isOpen: false })
 
+  useEffect(() => {
+    if (!confirmDelete.isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (confirmDelete.goalId) {
+          deleteGoal(confirmDelete.goalId);
+        }
+        setConfirmDelete({ isOpen: false });
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        setConfirmDelete({ isOpen: false });
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [confirmDelete.isOpen, confirmDelete.goalId, deleteGoal]);
+
   const addGoal = async () => {
     if (!newGoal.description.trim()) return
 
@@ -37,6 +57,13 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
       description: ''
     })
     setShowAddForm(false)
+  }
+
+  const handleGoalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      addGoal()
+    }
   }
 
   const renderAddGoalForm = () => (
@@ -71,6 +98,7 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
             placeholder="I want to..."
             value={newGoal.description}
             onChange={(e) => setNewGoal(prev => ({ ...prev, description: e.target.value }))}
+            onKeyDown={handleGoalKeyDown}
             className="goal-main-textarea"
             rows={3}
             autoFocus

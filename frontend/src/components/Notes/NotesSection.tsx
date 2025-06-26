@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
 interface Memory {
@@ -36,6 +36,23 @@ export default function NotesSection({
     }
     setConfirmDelete({ isOpen: false });
   };
+
+  useEffect(() => {
+    if (!confirmDelete.isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleConfirmDelete();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        setConfirmDelete({ isOpen: false });
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [confirmDelete.isOpen, confirmDelete.memoryId]);
   if (memoriesLoading) {
     return (
       <div className="section-content">
