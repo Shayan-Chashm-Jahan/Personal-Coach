@@ -7,25 +7,28 @@ interface ContextMenuProps {
   onOpenNewTab: () => void
   onClose: () => void
   onDelete?: () => void
+  showOpenInNewTab?: boolean
 }
 
-const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onOpenNewTab, onClose, onDelete }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onOpenNewTab, onClose, onDelete, showOpenInNewTab = true }) => {
   return (
     <div 
       className="context-menu"
       style={{ left: x, top: y }}
       onClick={onClose}
     >
-      <div 
-        className="context-menu-item"
-        onClick={(e) => {
-          e.stopPropagation()
-          onOpenNewTab()
-          onClose()
-        }}
-      >
-        Open in new tab
-      </div>
+      {showOpenInNewTab && (
+        <div 
+          className="context-menu-item"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenNewTab()
+            onClose()
+          }}
+        >
+          Open in new tab
+        </div>
+      )}
       {onDelete && (
         <div 
           className="context-menu-item context-menu-item-delete"

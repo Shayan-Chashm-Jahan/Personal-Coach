@@ -15,9 +15,10 @@ interface GoalsSectionProps {
   goals: Goal[]
   goalsLoading: boolean
   deleteGoal: (goalId: string) => Promise<void>
+  onContextMenu: (e: React.MouseEvent, url: string, onDelete?: () => void) => void
 }
 
-export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, goals, goalsLoading, deleteGoal }: GoalsSectionProps) {
+export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, goals, goalsLoading, deleteGoal, onContextMenu }: GoalsSectionProps) {
   const [newGoal, setNewGoal] = useState({
     description: ''
   })
@@ -106,36 +107,24 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
       ) : (
         <div className="goals-list">
           {goals.map((goal) => (
-            <div key={goal.id} className="goal-item" style={{ 
-              padding: '15px', 
-              margin: '10px 0', 
-              border: '1px solid #e0e0e0', 
-              borderRadius: '8px',
-              backgroundColor: '#f9f9f9',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <p style={{ margin: '0', lineHeight: '1.4', color: '#333', flex: 1 }}>{goal.description}</p>
-              <button
-                onClick={() => setConfirmDelete({ 
-                  isOpen: true, 
-                  goalId: goal.id, 
-                  goalDescription: goal.description 
-                })}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#999',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  padding: '5px',
-                  marginLeft: '10px'
-                }}
-                title="Delete goal"
-              >
-                ×
-              </button>
+            <div 
+              key={goal.id} 
+              className="goal-item" 
+              style={{ 
+                padding: '15px', 
+                margin: '10px 0', 
+                border: '1px solid #e0e0e0', 
+                borderRadius: '8px',
+                backgroundColor: '#f9f9f9',
+                cursor: 'pointer'
+              }}
+              onContextMenu={(e) => onContextMenu(e, `/goals/${goal.id}`, () => setConfirmDelete({ 
+                isOpen: true, 
+                goalId: goal.id, 
+                goalDescription: goal.description 
+              }))}
+            >
+              <p style={{ margin: '0', lineHeight: '1.4', color: '#333' }}>{goal.description}</p>
             </div>
           ))}
           {goals.length === 0 && (

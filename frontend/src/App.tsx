@@ -64,7 +64,7 @@ function AppRoutes() {
   const [chats, setChats] = useState<Chat[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [chatsLoading, setChatsLoading] = useState<boolean>(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; url: string; onDelete?: () => void } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; url: string; onDelete?: () => void; showOpenInNewTab?: boolean } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; chatId?: string; chatTitle?: string }>({ isOpen: false })
   const [showGoalForm, setShowGoalForm] = useState<boolean>(false)
 
@@ -611,7 +611,12 @@ function AppRoutes() {
 
   const handleContextMenu = (e: React.MouseEvent, url: string, onDelete?: () => void) => {
     e.preventDefault()
-    setContextMenu({ x: e.clientX, y: e.clientY, url, onDelete })
+    setContextMenu({ x: e.clientX, y: e.clientY, url, onDelete, showOpenInNewTab: true })
+  }
+
+  const handleGoalContextMenu = (e: React.MouseEvent, url: string, onDelete?: () => void) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, url, onDelete, showOpenInNewTab: false })
   }
 
   const handleOpenInNewTab = () => {
@@ -672,6 +677,7 @@ function AppRoutes() {
             goals={goals}
             goalsLoading={goalsLoading}
             deleteGoal={deleteGoal}
+            onContextMenu={handleGoalContextMenu}
           />
         )
       case SECTIONS.NOTES:
@@ -680,6 +686,7 @@ function AppRoutes() {
             memories={memories}
             memoriesLoading={memoriesLoading}
             deleteMemory={deleteMemory}
+            onContextMenu={handleGoalContextMenu}
           />
         )
       default:
@@ -841,6 +848,7 @@ function AppRoutes() {
           onOpenNewTab={handleOpenInNewTab}
           onClose={() => setContextMenu(null)}
           onDelete={contextMenu.onDelete}
+          showOpenInNewTab={contextMenu.showOpenInNewTab}
         />
       )}
       <ConfirmDialog
