@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+
 interface Chat {
   id: string
   title: string
@@ -18,7 +20,7 @@ interface SidebarProps {
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'notes'
+  NOTES: 'coach-notes'
 } as const
 
 export default function Sidebar({
@@ -30,6 +32,7 @@ export default function Sidebar({
   setCurrentChatId,
   deleteChat
 }: SidebarProps) {
+  const navigate = useNavigate()
   
   const renderNavigationItem = (section: string, label: string) => (
     <button 
@@ -42,10 +45,7 @@ export default function Sidebar({
   )
 
   const handleChatClick = (chatId: string) => {
-    setCurrentChatId(chatId)
-    if (activeSection !== SECTIONS.CHAT) {
-      setActiveSection(SECTIONS.CHAT)
-    }
+    navigate(`/chat/${chatId}`)
   }
 
   const renderChatList = () => {

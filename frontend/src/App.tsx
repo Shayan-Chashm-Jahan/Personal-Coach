@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation } from 'react-router-dom'
 import ChatSection from './components/Chat/ChatSection'
 import GoalsSection from './components/Goals/GoalsSection'
 import NotesSection from './components/Notes/NotesSection'
@@ -10,7 +11,7 @@ const API_BASE_URL = 'http://localhost:8000'
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'notes'
+  NOTES: 'coach-notes'
 } as const
 
 interface Message {
@@ -37,11 +38,14 @@ interface Notification {
   type: 'error' | 'success' | 'info'
 }
 
-function App() {
+function AppRoutes() {
   const [messages, setMessages] = useState<Message[]>([])
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { chat_id } = useParams<{ chat_id: string }>()
   const [inputValue, setInputValue] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [activeSection, setActiveSection] = useState<string>(SECTIONS.CHAT)
+  const [activeSection, setActiveSection] = useState<string>('')
   const [memories, setMemories] = useState<Memory[]>([])
   const [memoriesLoading, setMemoriesLoading] = useState<boolean>(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
@@ -86,6 +90,25 @@ function App() {
   useEffect(() => {
     checkAuthStatus()
   }, [])
+
+  useEffect(() => {
+    const path = location.pathname
+    if (path.startsWith('/chat/')) {
+      setActiveSection(SECTIONS.CHAT)
+    } else if (path === '/goals') {
+      setActiveSection(SECTIONS.GOALS)
+    } else if (path === '/coach-notes') {
+      setActiveSection(SECTIONS.NOTES)
+    } else if (path === '/chat' || path === '/') {
+      setActiveSection(SECTIONS.CHAT)
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (chat_id && chat_id !== currentChatId) {
+      setCurrentChatId(chat_id)
+    }
+  }, [chat_id, currentChatId])
 
   const validateToken = async (): Promise<boolean> => {
     try {
@@ -140,7 +163,7 @@ function App() {
       setMessages([])
       setMemories([])
       setGoals([])
-      setActiveSection(SECTIONS.CHAT)
+      navigate('/chat')
     }
   }
 
@@ -561,6 +584,22 @@ function App() {
     return titles[activeSection] || 'Chat'
   }
 
+  const handleSectionChange = (section: string) => {
+    if (section === SECTIONS.CHAT) {
+      navigate('/chat')
+    } else if (section === SECTIONS.GOALS) {
+      navigate('/goals')
+    } else if (section === SECTIONS.NOTES) {
+      navigate('/coach-notes')
+    }
+  }
+
+  const handleChatSelect = (chatId: string | null) => {
+    if (chatId) {
+      navigate(`/chat/${chatId}`)
+    }
+  }
+
   const renderActiveSection = (): React.JSX.Element => {
     switch (activeSection) {
       case SECTIONS.CHAT:
@@ -730,16 +769,30 @@ function App() {
     <div className="app-container">
       <Sidebar
         activeSection={activeSection}
-        setActiveSection={setActiveSection}
+        setActiveSection={handleSectionChange}
         logout={logout}
         chats={chats}
         currentChatId={currentChatId}
-        setCurrentChatId={setCurrentChatId}
+        setCurrentChatId={handleChatSelect}
         deleteChat={deleteChat}
       />
       {renderMainContent()}
       {renderNotifications()}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppRoutes />} />
+        <Route path="/chat" element={<AppRoutes />} />
+        <Route path="/chat/:chat_id" element={<AppRoutes />} />
+        <Route path="/goals" element={<AppRoutes />} />
+        <Route path="/coach-notes" element={<AppRoutes />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
