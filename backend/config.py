@@ -34,6 +34,7 @@ class ConfigManager:
             self.system_prompt = self._read_prompt_file(prompts_dir / "system_prompt.md")
             self.conversation_summary_prompt = self._read_prompt_file(prompts_dir / "conversation_summary.md")
             self.memory_extraction_prompt = self._read_prompt_file(prompts_dir / "memory_extraction.md")
+            self.initial_call_prompt = self._read_prompt_file(prompts_dir / "initial_call_prompt.md")
         except FileNotFoundError as e:
             raise ValueError(f"Failed to load prompt file: {e}")
     

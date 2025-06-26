@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 from config import config_manager
 from models import User, Memory, Message, Goal, Chat, get_db, create_tables
-from utils import stream_chat_response, llm_client
+from utils import stream_chat_response, generate_initial_call_response, llm_client
 
 
 class HistoryItem(BaseModel):
@@ -148,6 +148,10 @@ class ChatAPI:
         @self.app.post("/api/chats/generate-title")
         async def generate_title_route(request: TitleGenerateRequest, current_user: User = Depends(self.get_current_user)):
             return await self.generate_title(request)
+            
+        @self.app.post("/api/initial-call/chat")
+        async def initial_call_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.initial_call_chat(request, current_user, db)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -189,6 +193,25 @@ class ChatAPI:
                 memories = llm_client._extract_memories(message, full_response)
                 if memories:
                     llm_client.save_memories_to_db(memories, user.id, db)
+            
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    def _generate_initial_call_response(
+        self, 
+        message: str, 
+        history_dict: List[dict], 
+        user: User, 
+        db: Session,
+        prompt: str
+    ) -> Iterator[str]:
+        try:
+            full_response = ""
+            
+            for chunk in generate_initial_call_response(message, history_dict, user.id, db, prompt):
+                full_response += chunk
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
             
             yield "data: [DONE]\n\n"
         except Exception as e:
@@ -644,6 +667,37 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+    
+    async def initial_call_chat(
+        self, 
+        request: ChatRequest, 
+        current_user: User = Depends(get_current_user), 
+        db: Session = Depends(get_db)
+    ):
+        try:
+            self._validate_request(request)
+            history_dict = self._convert_history_to_dict(request.history)
+            
+            # Format chat history for the prompt
+            chat_history = ""
+            if history_dict:
+                for entry in history_dict:
+                    role = "User" if entry["role"] == "user" else "Coach"
+                    chat_history += f"{role}: {entry['content']}\n"
+            
+            # Use the initial call prompt
+            prompt = config_manager.initial_call_prompt.format(chat_history=chat_history)
+            
+            return StreamingResponse(
+                self._generate_initial_call_response(request.message, history_dict, current_user, db, prompt),
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Initial call chat error: {str(e)}")
     
     async def generate_title(self, request: TitleGenerateRequest):
         try:

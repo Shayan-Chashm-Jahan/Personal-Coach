@@ -289,6 +289,39 @@ class LLMStreamingClient:
             
         except Exception as e:
             raise
+    
+    def initial_call_response(
+        self, 
+        text: str, 
+        history: Optional[List[Dict[str, str]]] = None,
+        user_id: Optional[int] = None,
+        db: Optional[Session] = None,
+        prompt: str = ""
+    ) -> Iterator[str]:
+        try:
+            client = self._get_client()
+            
+            contents = self._build_contents(text, history, user_id, db)
+            
+            response_stream = client.models.generate_content_stream(
+                model=config_manager.model_name,
+                contents=contents,
+                config={
+                    "tools": [{"googleSearch": {}}],
+                    "systemInstruction": {
+                        "parts": [{"text": prompt}]
+                    },
+                    "temperature": config_manager.temperature,
+                    "maxOutputTokens": config_manager.max_tokens
+                }
+            )
+            
+            for chunk in response_stream:
+                if chunk.text:
+                    yield chunk.text
+            
+        except Exception as e:
+            raise
 
 
 llm_client = LLMStreamingClient()
@@ -301,4 +334,13 @@ def stream_chat_response(
     db: Optional[Session] = None
 ) -> Iterator[str]:
     return llm_client.stream_response(text, history, user_id, db)
+
+def generate_initial_call_response(
+    text: str, 
+    history: Optional[List[Dict[str, Any]]] = None,
+    user_id: Optional[int] = None,
+    db: Optional[Session] = None,
+    prompt: str = ""
+) -> Iterator[str]:
+    return llm_client.initial_call_response(text, history, user_id, db, prompt)
 

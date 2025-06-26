@@ -832,7 +832,7 @@ function AppRoutes() {
   }
 
   if (isAuthenticated && initialCallCompleted === false) {
-    return <InterviewPending />
+    return <InterviewPending getAuthHeaders={getAuthHeaders} showNotification={showNotification} logout={logout} />
   }
 
   const renderNotifications = () => (

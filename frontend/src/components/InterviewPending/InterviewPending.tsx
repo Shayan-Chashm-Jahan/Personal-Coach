@@ -5,9 +5,30 @@ interface Message {
   sender: "user" | "coach";
 }
 
-export default function InterviewPending() {
+interface HistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface InterviewPendingProps {
+  getAuthHeaders: () => Record<string, string>;
+  showNotification: (
+    message: string,
+    type: "error" | "success" | "info"
+  ) => void;
+  logout: () => void;
+}
+
+const API_BASE_URL = "http://localhost:8000";
+
+export default function InterviewPending({
+  getAuthHeaders,
+  showNotification,
+  logout,
+}: InterviewPendingProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,17 +46,146 @@ export default function InterviewPending() {
 
   useEffect(() => {
     if (inputRef.current && inputValue === "") {
-      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = "auto";
     }
   }, [inputValue]);
 
-  const sendMessage = (): void => {
+  const buildConversationHistory = (): HistoryItem[] => {
+    return messages.map((msg) => ({
+      role: msg.sender === "user" ? "user" : "assistant",
+      content: msg.text,
+    }));
+  };
+
+  const processChunk = (line: string, coachMessageIndex: number): boolean => {
+    if (!line.startsWith("data: ")) return false;
+
+    const data = line.slice(6).trim();
+    if (data === "[DONE]") return true;
+
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.chunk) {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            if (newMessages[coachMessageIndex]) {
+              const currentText = newMessages[coachMessageIndex].text;
+              newMessages[coachMessageIndex] = {
+                ...newMessages[coachMessageIndex],
+                text: currentText + parsed.chunk,
+              };
+            }
+            return newMessages;
+          });
+        } else if (parsed.error) {
+          showNotification(parsed.error, "error");
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            if (newMessages[coachMessageIndex]) {
+              newMessages.pop();
+            }
+            return newMessages;
+          });
+        }
+      } catch (error) {
+        showNotification("Error parsing response", "error");
+      }
+    }
+    return false;
+  };
+
+  const sendMessage = async (): Promise<void> => {
     if (!inputValue.trim()) return;
 
     const messageText = inputValue;
+    const conversationHistory = buildConversationHistory();
+
     setInputValue("");
-    
-    setMessages(prev => [...prev, { text: messageText, sender: "user" }]);
+    setIsLoading(true);
+    setMessages((prev) => [...prev, { text: messageText, sender: "user" }]);
+
+    try {
+      console.log("Sending message to initial call endpoint:", messageText);
+      const response = await fetch(`${API_BASE_URL}/api/initial-call/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          message: messageText,
+          history: conversationHistory,
+        }),
+      });
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401) {
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(
+              `AUTH_ERROR: ${errorData.detail || "Authentication failed"}`
+            );
+          } catch {
+            throw new Error(`AUTH_ERROR: Authentication failed`);
+          }
+        }
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const coachMessageIndex = messages.length + 1;
+      console.log("Adding coach message at index:", coachMessageIndex);
+      setMessages((prev) => [...prev, { text: "", sender: "coach" }]);
+      setIsLoading(false);
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const isDone = processChunk(line, coachMessageIndex);
+          if (isDone) {
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to send message";
+
+      if (errorMessage.startsWith("AUTH_ERROR:")) {
+        showNotification("Session expired. Please log in again.", "error");
+        setMessages((prev) => prev.slice(0, -1));
+        setTimeout(() => logout(), 2000);
+      } else {
+        showNotification(errorMessage, "error");
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          if (
+            newMessages[newMessages.length - 1]?.sender === "coach" &&
+            newMessages[newMessages.length - 1]?.text === ""
+          ) {
+            newMessages.pop();
+          }
+          return newMessages;
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -45,26 +195,46 @@ export default function InterviewPending() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ): void => {
     setInputValue(e.target.value);
-    
+
     const textarea = e.target;
-    textarea.style.height = 'auto';
+    textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
     const maxHeight = 120;
-    
+
     if (scrollHeight <= maxHeight) {
-      textarea.style.height = scrollHeight + 'px';
+      textarea.style.height = scrollHeight + "px";
     } else {
-      textarea.style.height = maxHeight + 'px';
+      textarea.style.height = maxHeight + "px";
     }
   };
 
   const renderMessage = (message: Message, index: number) => (
-    <div key={index} className={`initial-call-message-wrapper ${message.sender}`}>
+    <div
+      key={index}
+      className={`initial-call-message-wrapper ${message.sender}`}
+    >
       <div className={`initial-call-message ${message.sender}`}>
         <div className="initial-call-message-content">
-          <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
+          {message.sender === "coach" ? (
+            message.text ? (
+              <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
+            ) : (
+              <div className="typing-container">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span className="typing-text">AI Coach is thinking...</span>
+              </div>
+            )
+          ) : (
+            <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
+          )}
         </div>
       </div>
     </div>
@@ -77,12 +247,12 @@ export default function InterviewPending() {
           <h2>Welcome to Your Personal Coach</h2>
           <p>Let's start with your initial call</p>
         </div>
-        
+
         <div className="initial-call-messages-container">
           {messages.map(renderMessage)}
           <div ref={messagesEndRef} />
         </div>
-        
+
         <div className="initial-call-input-container">
           <div className="initial-call-input-field">
             <textarea
@@ -93,14 +263,14 @@ export default function InterviewPending() {
               placeholder="Tell me about yourself..."
               className="initial-call-message-input"
               rows={1}
-              style={{ resize: 'none', overflow: 'hidden' }}
+              style={{ resize: "none", overflow: "hidden" }}
             />
             <button
               onClick={sendMessage}
-              disabled={!inputValue.trim()}
+              disabled={isLoading || !inputValue.trim()}
               className="initial-call-send-button"
             >
-              →
+              {isLoading ? "..." : "→"}
             </button>
           </div>
         </div>
