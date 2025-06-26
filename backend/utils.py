@@ -1,4 +1,6 @@
+import ast
 import json
+import re
 import threading
 import time
 import traceback
@@ -127,6 +129,23 @@ class LLMStreamingClient:
         
         return response.choices[0].message.content
     
+    def _extract_list_from_response(self, content: str) -> List[str]:
+        first_bracket = content.find('[')
+        last_bracket = content.rfind(']')
+        
+        if first_bracket == -1 or last_bracket == -1:
+            return []
+        
+        list_string = content[first_bracket:last_bracket + 1]
+        
+        try:
+            parsed_list = ast.literal_eval(list_string)
+            if isinstance(parsed_list, list):
+                return [str(item).strip() for item in parsed_list if str(item).strip()]
+            return []
+        except:
+            return []
+    
     def _extract_memories(self, user_message: str, assistant_response: str) -> List[str]:
         memory_prompt = config_manager.memory_extraction_prompt.format(
             user_message=user_message,
@@ -144,18 +163,12 @@ class LLMStreamingClient:
             )
             
             content = response.choices[0].message.content.strip()
-            if content == "NONE" or not content:
+            
+            if content.upper() == "NONE" or not content:
                 return []
             
-            memories = []
-            for line in content.split('\n'):
-                line = line.strip()
-                if line and not line.startswith('NONE'):
-                    cleaned_line = line.lstrip('0123456789.- ').strip()
-                    if cleaned_line and len(cleaned_line) > 10:
-                        memories.append(cleaned_line)
+            return self._extract_list_from_response(content)
             
-            return memories
         except (openai.APIError, openai.APIConnectionError, openai.RateLimitError) as e:
             print(f"OpenAI API error in _extract_memories: {str(e)}")
             return []
