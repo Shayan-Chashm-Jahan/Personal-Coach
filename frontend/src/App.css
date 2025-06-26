@@ -1925,7 +1925,6 @@ html, body {
 
 .chat-item:hover {
   background: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
 }
 
 .chat-item.active {

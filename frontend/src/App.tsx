@@ -208,12 +208,26 @@ function App() {
         })
       })
       
-      if (!response.ok) {
+      if (response.ok) {
+        moveCurrentChatToTop()
+      } else {
         console.error('Failed to save message, status:', response.status)
       }
     } catch (error) {
       console.error('Failed to save message:', error)
     }
+  }
+
+  const moveCurrentChatToTop = (): void => {
+    if (!currentChatId) return
+    
+    setChats(prev => {
+      const currentChat = prev.find(chat => chat.id === currentChatId)
+      if (!currentChat) return prev
+      
+      const otherChats = prev.filter(chat => chat.id !== currentChatId)
+      return [currentChat, ...otherChats]
+    })
   }
 
   const clearChat = async (): Promise<void> => {
