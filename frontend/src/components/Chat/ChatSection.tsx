@@ -11,13 +11,6 @@ interface HistoryItem {
   content: string;
 }
 
-interface Chat {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface ChatSectionProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -70,7 +63,6 @@ export default function ChatSection({
     }
   }, [isLoading]);
 
-  // Scroll to bottom when messages change or finish loading
   useEffect(() => {
     if (messagesEndRef.current && !messagesLoading) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -271,58 +263,8 @@ export default function ChatSection({
     clearChat();
   };
 
-
-
-  const renderWelcomeMessage = () => (
-    <div className="welcome-message">
-      <div className="welcome-avatar">
-        <div className="avatar-gradient">
-          <div className="avatar-icon">🤖</div>
-        </div>
-      </div>
-      <div className="welcome-content">
-        <h3 className="welcome-title">Welcome to Your AI Coach</h3>
-        <p className="welcome-subtitle">
-          I'm here to help you achieve your goals and unlock your potential.
-          Let's start your journey together!
-        </p>
-        <div className="welcome-suggestions">
-          <button
-            className="suggestion-chip"
-            onClick={() =>
-              setInputValue("What are some effective goal-setting strategies?")
-            }
-          >
-            💡 Goal Setting Tips
-          </button>
-          <button
-            className="suggestion-chip"
-            onClick={() =>
-              setInputValue("How can I stay motivated when facing challenges?")
-            }
-          >
-            🚀 Stay Motivated
-          </button>
-          <button
-            className="suggestion-chip"
-            onClick={() =>
-              setInputValue("Help me create a daily routine for success")
-            }
-          >
-            ⏰ Daily Routine
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderMessage = (message: Message, index: number) => (
     <div key={index} className={`message-wrapper ${message.sender}`}>
-      {message.sender === "coach" && (
-        <div className="message-avatar">
-          <div className="avatar-small">🤖</div>
-        </div>
-      )}
       <div className={`message ${message.sender}`}>
         <div className="message-content">
           {message.sender === "coach" ? (
@@ -350,13 +292,6 @@ export default function ChatSection({
           })}
         </div>
       </div>
-      {message.sender === "user" && (
-        <div className="message-avatar user-avatar">
-          <div className="avatar-small user">
-            <span className="user-icon">👤</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -396,8 +331,6 @@ export default function ChatSection({
             <div className="loading-spinner"></div>
             <div className="loading-message">Loading your messages...</div>
           </div>
-        ) : messages.length === 0 ? (
-          renderWelcomeMessage()
         ) : (
           <>
             {messages.map(renderMessage)}

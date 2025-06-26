@@ -66,6 +66,7 @@ function AppRoutes() {
   const [chatsLoading, setChatsLoading] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; url: string; onDelete?: () => void } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; chatId?: string; chatTitle?: string }>({ isOpen: false })
+  const [showGoalForm, setShowGoalForm] = useState<boolean>(false)
 
   useEffect(() => {
     if (activeSection === SECTIONS.NOTES) {
@@ -301,17 +302,13 @@ function AppRoutes() {
         },
         body: JSON.stringify({
           title: goalData.title,
-          description: goalData.description,
-          category: goalData.category || null,
-          priority: goalData.priority || null,
-          target_date: goalData.targetDate || null
+          description: goalData.description
         })
       })
 
       if (response.ok) {
         const newGoal = await response.json()
         setGoals(prev => [newGoal, ...prev])
-        showNotification('Goal created successfully!', 'success')
       } else if (response.status === 401) {
         logout()
       } else {
@@ -331,7 +328,6 @@ function AppRoutes() {
 
       if (response.ok) {
         setGoals(prev => prev.filter(goal => goal.id !== goalId))
-        showNotification('Goal deleted successfully', 'success')
       } else if (response.status === 401) {
         logout()
       } else {
@@ -385,9 +381,6 @@ function AppRoutes() {
         setChats(prev => [data, ...prev])
         setCurrentChatId(data.id)
         setMessages([])
-        if (title !== 'New Chat') {
-          showNotification('New chat created', 'success')
-        }
         return data.id
       } else if (response.status === 401) {
         logout()
@@ -482,7 +475,6 @@ function AppRoutes() {
             navigate(`/chat/${newChatId}`)
           }
         }
-        showNotification('Chat deleted', 'success')
       } else if (response.status === 401) {
         logout()
       } else {
@@ -538,7 +530,6 @@ function AppRoutes() {
         setGoals(prev => prev.map(goal => 
           goal.id === goalId ? updatedGoal : goal
         ))
-        showNotification(`Goal marked as ${status.toLowerCase()}`, 'success')
       } else if (response.status === 401) {
         logout()
       } else {
@@ -675,11 +666,12 @@ function AppRoutes() {
       case SECTIONS.GOALS:
         return (
           <GoalsSection 
+            createGoal={createGoal}
+            showAddForm={showGoalForm}
+            setShowAddForm={setShowGoalForm}
             goals={goals}
             goalsLoading={goalsLoading}
-            createGoal={createGoal}
             deleteGoal={deleteGoal}
-            updateGoalStatus={updateGoalStatus}
           />
         )
       case SECTIONS.NOTES:
@@ -785,6 +777,18 @@ function AppRoutes() {
             </svg>
           </Link>
         )}
+        {activeSection === SECTIONS.GOALS && (
+          <button 
+            onClick={() => setShowGoalForm(true)}
+            className="header-new-chat-button"
+            title="Add New Goal"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        )}
       </div>
       {renderActiveSection()}
     </div>
@@ -842,7 +846,7 @@ function AppRoutes() {
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         title="Delete Chat"
-        message={`Are you sure you want to delete "${confirmDialog.chatTitle}"? This action cannot be undone.`}
+        message="This action cannot be undone."
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDialog({ isOpen: false })}
         confirmText="Delete"
