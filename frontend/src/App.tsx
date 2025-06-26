@@ -6,6 +6,7 @@ import NotesSection from './components/Notes/NotesSection'
 import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenu from './components/ContextMenu/ContextMenu'
 import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog'
+import InterviewPending from './components/InterviewPending/InterviewPending'
 import './App.css'
 
 const API_BASE_URL = 'http://localhost:8000'
@@ -67,6 +68,7 @@ function AppRoutes() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; url: string; onDelete?: () => void; showOpenInNewTab?: boolean } | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; chatId?: string; chatTitle?: string }>({ isOpen: false })
   const [showGoalForm, setShowGoalForm] = useState<boolean>(false)
+  const [initialCallCompleted, setInitialCallCompleted] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (activeSection === SECTIONS.NOTES) {
@@ -138,6 +140,21 @@ function AppRoutes() {
     }
   }
 
+  const fetchUserStatus = async (): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user/status`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setInitialCallCompleted(data.initial_call_completed)
+      }
+    } catch (error) {
+      console.error('Failed to fetch user status:', error)
+    }
+  }
+
   const checkAuthStatus = async (): Promise<void> => {
     try {
       const token = localStorage.getItem('auth_token')
@@ -145,6 +162,7 @@ function AppRoutes() {
         const isValid = await validateToken()
         if (isValid) {
           setIsAuthenticated(true)
+          await fetchUserStatus()
         } else {
           localStorage.removeItem('auth_token')
           setIsAuthenticated(false)
@@ -811,6 +829,10 @@ function AppRoutes() {
 
   if (!isAuthenticated) {
     return renderAuthForm()
+  }
+
+  if (isAuthenticated && initialCallCompleted === false) {
+    return <InterviewPending />
   }
 
   const renderNotifications = () => (

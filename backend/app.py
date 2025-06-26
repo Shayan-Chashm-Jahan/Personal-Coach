@@ -121,6 +121,10 @@ class ChatAPI:
         async def update_goal_status_route(goal_id: int, status: str = "Active", current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.update_goal_status(goal_id, status, current_user, db)
             
+        @self.app.get("/api/user/status")
+        async def get_user_status_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_user_status(current_user, db)
+            
         @self.app.get("/api/chats")
         async def get_chats_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_chats(current_user, db)
@@ -488,6 +492,18 @@ class ChatAPI:
             }
         except HTTPException:
             raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_user_status(
+        self, 
+        current_user: User = Depends(get_current_user), 
+        db: Session = Depends(get_db)
+    ):
+        try:
+            return {
+                "initial_call_completed": current_user.initial_call_completed or False
+            }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
