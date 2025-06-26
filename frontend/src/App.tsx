@@ -160,7 +160,7 @@ function AppRoutes() {
       localStorage.setItem('auth_token', token)
       setIsAuthenticated(true)
     } catch (error) {
-      console.error('Failed to save auth token:', error)
+      showNotification('Failed to save auth token', 'error')
     }
   }
 
@@ -168,7 +168,7 @@ function AppRoutes() {
     try {
       localStorage.removeItem('auth_token')
     } catch (error) {
-      console.error('Failed to remove auth token:', error)
+      showNotification('Failed to remove auth token', 'error')
     } finally {
       setIsAuthenticated(false)
       setMessages([])
@@ -183,7 +183,6 @@ function AppRoutes() {
       const token = localStorage.getItem('auth_token')
       return token ? { 'Authorization': `Bearer ${token}` } : {}
     } catch (error) {
-      console.error('Failed to get auth token:', error)
       return {}
     }
   }
@@ -201,7 +200,7 @@ function AppRoutes() {
         setMemories(data.memories || [])
       }
     } catch (error) {
-      console.error('Failed to fetch memories:', error)
+      showNotification('Failed to fetch memories', 'error')
     } finally {
       setMemoriesLoading(false)
     }
@@ -218,7 +217,7 @@ function AppRoutes() {
         setMemories(prev => prev.filter(memory => memory.id !== memoryId))
       }
     } catch (error) {
-      console.error('Failed to delete memory:', error)
+      showNotification('Failed to delete memory', 'error')
     }
   }
 
@@ -244,11 +243,9 @@ function AppRoutes() {
       
       if (response.ok) {
         moveCurrentChatToTop()
-      } else {
-        console.error('Failed to save message, status:', response.status)
       }
     } catch (error) {
-      console.error('Failed to save message:', error)
+      showNotification('Failed to save message', 'error')
     }
   }
 
@@ -264,15 +261,9 @@ function AppRoutes() {
     })
   }
 
-  const clearChat = async (): Promise<void> => {
+  const clearChat = () => {
     if (!currentChatId) return
-    
-    try {
-      await deleteChat(currentChatId)
-    } catch (error) {
-      console.error('Failed to clear chat:', error)
-      showNotification('Failed to clear chat', 'error')
-    }
+    confirmDeleteChat(currentChatId)
   }
 
   const fetchGoals = async (): Promise<void> => {
@@ -290,7 +281,7 @@ function AppRoutes() {
         logout()
       }
     } catch (error) {
-      console.error('Failed to fetch goals:', error)
+      showNotification('Failed to fetch goals', 'error')
     } finally {
       setGoalsLoading(false)
     }
@@ -323,7 +314,6 @@ function AppRoutes() {
         throw new Error('Failed to create goal')
       }
     } catch (error) {
-      console.error('Failed to create goal:', error)
       showNotification('Failed to create goal', 'error')
     }
   }
@@ -344,7 +334,6 @@ function AppRoutes() {
         throw new Error('Failed to delete goal')
       }
     } catch (error) {
-      console.error('Failed to delete goal:', error)
       showNotification('Failed to delete goal', 'error')
     }
   }
@@ -370,7 +359,7 @@ function AppRoutes() {
         logout()
       }
     } catch (error) {
-      console.error('Failed to fetch chats:', error)
+      showNotification('Failed to fetch chats', 'error')
     } finally {
       setChatsLoading(false)
     }
@@ -402,7 +391,6 @@ function AppRoutes() {
         throw new Error('Failed to create chat')
       }
     } catch (error) {
-      console.error('Failed to create chat:', error)
       if (title !== 'New Chat') {
         showNotification('Failed to create chat', 'error')
       }
@@ -427,7 +415,7 @@ function AppRoutes() {
         ))
       }
     } catch (error) {
-      console.error('Failed to update chat title:', error)
+      showNotification('Failed to update chat title', 'error')
     }
   }
 
@@ -474,7 +462,6 @@ function AppRoutes() {
         throw new Error('Failed to delete chat')
       }
     } catch (error) {
-      console.error('Failed to delete chat:', error)
       showNotification('Failed to delete chat', 'error')
     }
   }
@@ -500,10 +487,10 @@ function AppRoutes() {
       } else if (response.status === 401) {
         logout()
       } else {
-        console.error('Failed to fetch messages, status:', response.status)
+        showNotification('Failed to fetch messages', 'error')
       }
     } catch (error) {
-      console.error('Failed to fetch chat messages:', error)
+      showNotification('Failed to fetch chat messages', 'error')
     } finally {
       setMessagesLoading(false)
     }
@@ -528,7 +515,6 @@ function AppRoutes() {
         throw new Error('Failed to update goal status')
       }
     } catch (error) {
-      console.error('Failed to update goal status:', error)
       showNotification('Failed to update goal status', 'error')
     }
   }
@@ -632,11 +618,6 @@ function AppRoutes() {
     }
   }
 
-  const handleChatSelect = (chatId: string | null) => {
-    if (chatId) {
-      navigate(`/chat/${chatId}`)
-    }
-  }
 
   const renderActiveSection = (): React.JSX.Element => {
     switch (activeSection) {
@@ -818,7 +799,6 @@ function AppRoutes() {
         logout={logout}
         chats={chats}
         currentChatId={currentChatId}
-        setCurrentChatId={handleChatSelect}
         deleteChat={confirmDeleteChat}
         onContextMenu={handleContextMenu}
       />

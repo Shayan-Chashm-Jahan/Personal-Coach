@@ -13,8 +13,7 @@ interface SidebarProps {
   logout: () => void
   chats: Chat[]
   currentChatId: string | null
-  setCurrentChatId: (chatId: string | null) => void
-  deleteChat: (chatId: string) => Promise<void>
+  deleteChat: (chatId: string) => void
   onContextMenu: (e: React.MouseEvent, url: string, onDelete?: () => void) => void
 }
 
@@ -30,7 +29,6 @@ export default function Sidebar({
   logout,
   chats,
   currentChatId,
-  setCurrentChatId,
   deleteChat,
   onContextMenu
 }: SidebarProps) {

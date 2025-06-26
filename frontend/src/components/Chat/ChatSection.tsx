@@ -33,7 +33,7 @@ interface ChatSectionProps {
   logout: () => void;
   saveMessage: (message: Message) => Promise<void>;
   messagesLoading?: boolean;
-  clearChat: () => Promise<void>;
+  clearChat: () => void;
   chats: Chat[];
   currentChatId: string | null;
   createChat: (title?: string) => Promise<string | null>;
@@ -123,19 +123,17 @@ export default function ChatSection({
             return newMessages;
           });
         } else if (parsed.error) {
+          showNotification(parsed.error, "error");
           setMessages((prev) => {
             const newMessages = [...prev];
             if (newMessages[coachMessageIndex]) {
-              newMessages[coachMessageIndex] = {
-                ...newMessages[coachMessageIndex],
-                text: `Error: ${parsed.error}`,
-              };
+              newMessages.pop();
             }
             return newMessages;
           });
         }
       } catch (error) {
-        console.error("Error parsing chunk:", error);
+        showNotification("Error parsing response", "error");
       }
     }
     return false;
@@ -250,22 +248,14 @@ export default function ChatSection({
         setMessages((prev) => prev.slice(0, -1));
         setTimeout(() => logout(), 2000);
       } else {
-        console.log("Error sending message:", error);
+        showNotification(errorMessage, "error");
         setMessages((prev) => {
           const newMessages = [...prev];
           if (
             newMessages[newMessages.length - 1]?.sender === "coach" &&
             newMessages[newMessages.length - 1]?.text === ""
           ) {
-            newMessages[newMessages.length - 1] = {
-              text: `Error: ${errorMessage}`,
-              sender: "coach",
-            };
-          } else {
-            newMessages.push({
-              text: `Error: ${errorMessage}`,
-              sender: "coach",
-            });
+            newMessages.pop();
           }
           return newMessages;
         });
@@ -282,9 +272,9 @@ export default function ChatSection({
     }
   };
 
-  const handleClearChat = async (): Promise<void> => {
+  const handleClearChat = (): void => {
     setShowClearConfirm(false);
-    await clearChat();
+    clearChat();
   };
 
 
