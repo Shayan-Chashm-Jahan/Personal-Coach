@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   text: string;
@@ -55,6 +56,13 @@ export default function InterviewPending({
       role: msg.sender === "user" ? "user" : "assistant",
       content: msg.text,
     }));
+  };
+
+  const preprocessMarkdown = (text: string): string => {
+    return text
+      .replace(/\n#/g, '\n\n#')
+      .replace(/^#/g, '\n#')
+      .replace(/\n\n\n+/g, '\n\n');
   };
 
   const processChunk = (line: string, coachMessageIndex: number): boolean => {
@@ -221,7 +229,19 @@ export default function InterviewPending({
         <div className="initial-call-message-content">
           {message.sender === "coach" ? (
             message.text ? (
-              <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => <p style={{ margin: '0.5rem 0' }}>{children}</p>,
+                  h1: ({ children }) => <h1 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h1>,
+                  h2: ({ children }) => <h2 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h2>,
+                  h3: ({ children }) => <h3 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h3>,
+                  h4: ({ children }) => <h4 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h4>,
+                  h5: ({ children }) => <h5 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h5>,
+                  h6: ({ children }) => <h6 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h6>,
+                }}
+              >
+                {preprocessMarkdown(message.text)}
+              </ReactMarkdown>
             ) : (
               <div className="typing-container">
                 <div className="typing-indicator">
