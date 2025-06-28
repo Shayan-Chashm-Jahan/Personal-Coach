@@ -348,43 +348,48 @@ class LLMStreamingClient:
                 config=config, 
             )
             
-            # Check if the response contains function calls
             if (response.candidates and 
                 response.candidates[0].content and 
                 response.candidates[0].content.parts):
                 
+                function_calls_found = False
+                function_response_parts = []
+                
                 for part in response.candidates[0].content.parts:
                     if hasattr(part, 'function_call') and part.function_call:
+                        function_calls_found = True
                         function_call = part.function_call
                         if function_call.name == "update_user_profile":
-                            # Execute the function call
                             self._handle_update_user_profile(dict(function_call.args), user_id, db)
                             
-                            # Create function response
                             function_response_part = types.Part.from_function_response(
                                 name=function_call.name,
                                 response={"success": True}
                             )
-                            
-                            # Add the original response and function response to contents
-                            contents.append(response.candidates[0].content)
-                            contents.append(types.Content(
-                                role="user", 
-                                parts=[function_response_part]
-                            ))
-                            
-                            # Get final response from model
-                            final_response = client.models.generate_content(
-                                model=config_manager.model_name,
-                                contents=contents,
-                                config=config
-                            )
-                            
-                            return final_response.text if final_response.text else ""
+                            function_response_parts.append(function_response_part)
+                
+                if function_calls_found:
+                    if self._is_profile_complete(user_id, db):
+                        return "END"
+                    
+                    contents.append(response.candidates[0].content)
+                    contents.append(types.Content(
+                        role="user", 
+                        parts=function_response_parts
+                    ))
+                    
+                    final_response = client.models.generate_content(
+                        model=config_manager.model_name,
+                        contents=contents,
+                        config=config
+                    )
+                    
+                    return final_response.text if final_response.text else ""
             
             return response.text if response.text else ""
             
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise
     
     def _handle_update_user_profile(self, args: dict, user_id: int, db: Session):
@@ -427,6 +432,28 @@ class LLMStreamingClient:
         except Exception:
             db.rollback()
             raise
+
+    def _is_profile_complete(self, user_id: int, db: Session) -> bool:
+        if not user_id or not db:
+            return False
+            
+        from models import UserProfile
+        
+        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        if not profile:
+            return False
+        
+        required_fields = [
+            profile.first_name,
+            profile.last_name, 
+            profile.birth_date,
+            profile.personal_characteristics,
+            profile.life_ambitions,
+            profile.career_ambitions,
+            profile.six_month_objectives
+        ]
+        
+        return all(field is not None and str(field).strip() != '' for field in required_fields)
 
 
 llm_client = LLMStreamingClient()
