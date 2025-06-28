@@ -207,12 +207,8 @@ class ChatAPI:
         prompt: str
     ) -> Iterator[str]:
         try:
-            full_response = ""
-            
-            for chunk in generate_initial_call_response(message, history_dict, user.id, db, prompt):
-                full_response += chunk
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-            
+            response = generate_initial_call_response(message, history_dict, user.id, db, prompt)
+            yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -678,14 +674,12 @@ class ChatAPI:
             self._validate_request(request)
             history_dict = self._convert_history_to_dict(request.history)
             
-            # Format chat history for the prompt
             chat_history = ""
             if history_dict:
                 for entry in history_dict:
                     role = "User" if entry["role"] == "user" else "Coach"
                     chat_history += f"{role}: {entry['content']}\n"
             
-            # Use the initial call prompt
             prompt = config_manager.initial_call_prompt.format(chat_history=chat_history)
             
             return StreamingResponse(

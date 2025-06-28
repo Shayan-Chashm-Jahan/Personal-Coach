@@ -60,9 +60,9 @@ export default function InterviewPending({
 
   const preprocessMarkdown = (text: string): string => {
     return text
-      .replace(/\n#/g, '\n\n#')
-      .replace(/^#/g, '\n#')
-      .replace(/\n\n\n+/g, '\n\n');
+      .replace(/\n#/g, "\n\n#")
+      .replace(/^#/g, "\n#")
+      .replace(/\n\n\n+/g, "\n\n");
   };
 
   const processChunk = (line: string, coachMessageIndex: number): boolean => {
@@ -114,7 +114,6 @@ export default function InterviewPending({
     setMessages((prev) => [...prev, { text: messageText, sender: "user" }]);
 
     try {
-      console.log("Sending message to initial call endpoint:", messageText);
       const response = await fetch(`${API_BASE_URL}/api/initial-call/chat`, {
         method: "POST",
         headers: {
@@ -126,7 +125,6 @@ export default function InterviewPending({
           history: conversationHistory,
         }),
       });
-      console.log("Response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -144,7 +142,6 @@ export default function InterviewPending({
       }
 
       const coachMessageIndex = messages.length + 1;
-      console.log("Adding coach message at index:", coachMessageIndex);
       setMessages((prev) => [...prev, { text: "", sender: "coach" }]);
       setIsLoading(false);
 
@@ -231,13 +228,27 @@ export default function InterviewPending({
             message.text ? (
               <ReactMarkdown
                 components={{
-                  p: ({ children }) => <p style={{ margin: '0.5rem 0' }}>{children}</p>,
-                  h1: ({ children }) => <h1 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h1>,
-                  h2: ({ children }) => <h2 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h2>,
-                  h3: ({ children }) => <h3 style={{ margin: '1rem 0 0.5rem 0' }}>{children}</h3>,
-                  h4: ({ children }) => <h4 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h4>,
-                  h5: ({ children }) => <h5 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h5>,
-                  h6: ({ children }) => <h6 style={{ margin: '0.8rem 0 0.4rem 0' }}>{children}</h6>,
+                  p: ({ children }) => (
+                    <p style={{ margin: "0.5rem 0" }}>{children}</p>
+                  ),
+                  h1: ({ children }) => (
+                    <h1 style={{ margin: "1rem 0 0.5rem 0" }}>{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 style={{ margin: "1rem 0 0.5rem 0" }}>{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 style={{ margin: "1rem 0 0.5rem 0" }}>{children}</h3>
+                  ),
+                  h4: ({ children }) => (
+                    <h4 style={{ margin: "0.8rem 0 0.4rem 0" }}>{children}</h4>
+                  ),
+                  h5: ({ children }) => (
+                    <h5 style={{ margin: "0.8rem 0 0.4rem 0" }}>{children}</h5>
+                  ),
+                  h6: ({ children }) => (
+                    <h6 style={{ margin: "0.8rem 0 0.4rem 0" }}>{children}</h6>
+                  ),
                 }}
               >
                 {preprocessMarkdown(message.text)}
@@ -249,7 +260,7 @@ export default function InterviewPending({
                   <span></span>
                   <span></span>
                 </div>
-                <span className="typing-text">AI Coach is thinking...</span>
+                <span className="typing-text">Coach is typing...</span>
               </div>
             )
           ) : (

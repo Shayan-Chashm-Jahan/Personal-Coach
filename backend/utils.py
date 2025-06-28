@@ -297,30 +297,135 @@ class LLMStreamingClient:
         user_id: Optional[int] = None,
         db: Optional[Session] = None,
         prompt: str = ""
-    ) -> Iterator[str]:
+    ) -> str:
         try:
             client = self._get_client()
             
             contents = self._build_contents(text, history, user_id, db)
             
-            response_stream = client.models.generate_content_stream(
+            if prompt:
+                system_content = types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=prompt)]
+                )
+                contents.insert(0, system_content)
+            function_declarations = [
+                {
+                    "name": "update_user_profile",
+                    "description": "Update a specific attribute of the user's profile during the initial call",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_profile_key": {
+                                "type": "string",
+                                "description": "The profile attribute to update",
+                                "enum": [
+                                    "first_name",
+                                    "last_name", 
+                                    "birth_date",
+                                    "personal_characteristics",
+                                    "life_ambitions",
+                                    "career_ambitions",
+                                    "six_month_objectives"
+                                ]
+                            },
+                            "user_profile_value": {
+                                "type": "string",
+                                "description": "The value to set for the profile attribute. For birth_date, use YYYY-MM-DD format."
+                            }
+                        },
+                        "required": ["user_profile_key", "user_profile_value"]
+                    }
+                }
+            ]
+
+            tools = types.Tool(function_declarations=function_declarations)
+            config = types.GenerateContentConfig(tools=[tools])
+            
+            response = client.models.generate_content(
                 model=config_manager.model_name,
                 contents=contents,
-                config={
-                    "tools": [{"googleSearch": {}}],
-                    "systemInstruction": {
-                        "parts": [{"text": prompt}]
-                    },
-                    "temperature": config_manager.temperature,
-                    "maxOutputTokens": config_manager.max_tokens
-                }
+                config=config, 
             )
             
-            for chunk in response_stream:
-                if chunk.text:
-                    yield chunk.text
+            # Check if the response contains function calls
+            if (response.candidates and 
+                response.candidates[0].content and 
+                response.candidates[0].content.parts):
+                
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'function_call') and part.function_call:
+                        function_call = part.function_call
+                        if function_call.name == "update_user_profile":
+                            # Execute the function call
+                            self._handle_update_user_profile(dict(function_call.args), user_id, db)
+                            
+                            # Create function response
+                            function_response_part = types.Part.from_function_response(
+                                name=function_call.name,
+                                response={"success": True}
+                            )
+                            
+                            # Add the original response and function response to contents
+                            contents.append(response.candidates[0].content)
+                            contents.append(types.Content(
+                                role="user", 
+                                parts=[function_response_part]
+                            ))
+                            
+                            # Get final response from model
+                            final_response = client.models.generate_content(
+                                model=config_manager.model_name,
+                                contents=contents,
+                                config=config
+                            )
+                            
+                            return final_response.text if final_response.text else ""
+            
+            return response.text if response.text else ""
             
         except Exception as e:
+            raise
+    
+    def _handle_update_user_profile(self, args: dict, user_id: int, db: Session):
+        if not user_id or not db:
+            return
+            
+        from models import UserProfile
+        from datetime import datetime, timezone
+        
+        if 'user_profile_key' not in args or 'user_profile_value' not in args:
+            return
+        
+        key = args['user_profile_key']
+        value = args['user_profile_value']
+        
+        allowed_keys = [
+            'first_name', 'last_name', 'birth_date', 'personal_characteristics',
+            'life_ambitions', 'career_ambitions', 'six_month_objectives'
+        ]
+        if key not in allowed_keys:
+            return
+        
+        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        if not profile:
+            profile = UserProfile(user_id=user_id)
+            db.add(profile)
+        
+        if key == 'birth_date':
+            try:
+                setattr(profile, key, datetime.strptime(value, '%Y-%m-%d').date())
+            except ValueError:
+                return
+        else:
+            setattr(profile, key, value)
+        
+        profile.updated_at = datetime.now(timezone.utc)
+        
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
             raise
 
 
@@ -341,6 +446,6 @@ def generate_initial_call_response(
     user_id: Optional[int] = None,
     db: Optional[Session] = None,
     prompt: str = ""
-) -> Iterator[str]:
+) -> str:
     return llm_client.initial_call_response(text, history, user_id, db, prompt)
 

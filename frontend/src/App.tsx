@@ -536,27 +536,6 @@ function AppRoutes() {
     }
   }
 
-  const updateGoalStatus = async (goalId: string, status: string): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/goals/${goalId}/status?status=${status}`, {
-        method: 'PUT',
-        headers: getAuthHeaders()
-      })
-
-      if (response.ok) {
-        const updatedGoal = await response.json()
-        setGoals(prev => prev.map(goal => 
-          goal.id === goalId ? updatedGoal : goal
-        ))
-      } else if (response.status === 401) {
-        logout()
-      } else {
-        throw new Error('Failed to update goal status')
-      }
-    } catch (error) {
-      showNotification('Failed to update goal status', 'error')
-    }
-  }
 
   const login = async (email: string, password: string): Promise<void> => {
     try {

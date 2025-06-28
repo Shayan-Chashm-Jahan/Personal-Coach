@@ -71,7 +71,7 @@ export default function ChatSection({
 
   useEffect(() => {
     if (inputRef.current && inputValue === "") {
-      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = "auto";
     }
   }, [inputValue]);
 
@@ -264,18 +264,20 @@ export default function ChatSection({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ): void => {
     setInputValue(e.target.value);
-    
+
     const textarea = e.target;
-    textarea.style.height = 'auto';
+    textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
     const maxHeight = 120; // Maximum height in pixels (about 6 lines)
-    
+
     if (scrollHeight <= maxHeight) {
-      textarea.style.height = scrollHeight + 'px';
+      textarea.style.height = scrollHeight + "px";
     } else {
-      textarea.style.height = maxHeight + 'px';
+      textarea.style.height = maxHeight + "px";
     }
   };
 
@@ -298,11 +300,11 @@ export default function ChatSection({
                   <span></span>
                   <span></span>
                 </div>
-                <span className="typing-text">AI Coach is thinking...</span>
+                <span className="typing-text">Coach is typing...</span>
               </div>
             )
           ) : (
-            <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
           )}
         </div>
         <div className="message-timestamp">
@@ -328,7 +330,7 @@ export default function ChatSection({
           className="message-input"
           disabled={isLoading}
           rows={1}
-          style={{ resize: 'none', overflow: 'hidden' }}
+          style={{ resize: "none", overflow: "hidden" }}
         />
         <button
           onClick={sendMessage}
@@ -388,7 +390,6 @@ export default function ChatSection({
           </div>
         </div>
       )}
-
     </div>
   );
 }
