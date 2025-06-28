@@ -156,6 +156,14 @@ class ChatAPI:
         @self.app.post("/api/initial-call/initialize")
         async def initialize_user_profile_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.initialize_user_profile(current_user, db)
+            
+        @self.app.get("/api/books")
+        async def get_books_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_books(current_user, db)
+            
+        @self.app.get("/api/videos")
+        async def get_videos_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_videos(current_user, db)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -212,6 +220,32 @@ class ChatAPI:
     ) -> Iterator[str]:
         try:
             response = generate_initial_call_response(message, history_dict, user.id, db, prompt)
+            yield f"data: {json.dumps({'chunk': response})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    def _generate_initial_call_response_with_save(
+        self, 
+        message: str, 
+        history_dict: List[dict], 
+        user_id: int, 
+        db: Session,
+        prompt: str
+    ) -> Iterator[str]:
+        try:
+            response = generate_initial_call_response(message, history_dict, user_id, db, prompt)
+            
+            from models import Message
+            coach_message = Message(
+                content=response,
+                sender="coach",
+                user_id=user_id,
+                chat_id=0
+            )
+            db.add(coach_message)
+            db.commit()
+            
             yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
@@ -678,6 +712,16 @@ class ChatAPI:
             self._validate_request(request)
             history_dict = self._convert_history_to_dict(request.history)
             
+            from models import Message
+            user_message = Message(
+                content=request.message,
+                sender="user",
+                user_id=current_user.id,
+                chat_id=0
+            )
+            db.add(user_message)
+            db.commit()
+            
             chat_history = ""
             if history_dict:
                 for entry in history_dict:
@@ -687,7 +731,7 @@ class ChatAPI:
             prompt = config_manager.initial_call_prompt.format(chat_history=chat_history)
             
             return StreamingResponse(
-                self._generate_initial_call_response(request.message, history_dict, current_user, db, prompt),
+                self._generate_initial_call_response_with_save(request.message, history_dict, current_user.id, db, prompt),
                 media_type="text/plain",
                 headers={
                     "Cache-Control": "no-cache",
@@ -703,13 +747,42 @@ class ChatAPI:
         db: Session = Depends(get_db)
     ):
         try:
-            import time
-            time.sleep(5)
+            from models import Message, Book, Video
             
             user = db.query(User).filter(User.id == current_user.id).first()
-            if user:
-                user.initial_call_completed = True
-                db.commit()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            messages = db.query(Message).filter(Message.user_id == current_user.id, Message.chat_id == 0).order_by(Message.created_at).all()
+            
+            conversation_text = ""
+            for msg in messages:
+                role = "User" if msg.sender == "user" else "Coach"
+                conversation_text += f"{role}: {msg.content}\n"
+            
+            if conversation_text.strip():
+                recommendations = llm_client.find_recommendations(conversation_text)
+                
+                for book_data in recommendations.get("books", []):
+                    book = Book(
+                        title=book_data.get("title", ""),
+                        author=book_data.get("author", ""),
+                        description=book_data.get("description", ""),
+                        user_id=current_user.id
+                    )
+                    db.add(book)
+                
+                for video_data in recommendations.get("videos", []):
+                    video = Video(
+                        title=video_data.get("title", ""),
+                        url=video_data.get("url", ""),
+                        description=video_data.get("description", ""),
+                        user_id=current_user.id
+                    )
+                    db.add(video)
+            
+            user.initial_call_completed = True
+            db.commit()
             
             return {"success": True, "message": "Profile initialization completed"}
         except Exception as e:
@@ -756,6 +829,60 @@ class ChatAPI:
             if len(title) > 30:
                 title = title[:27] + "..."
             return {"title": title}
+    
+    async def get_books(
+        self, 
+        current_user: User = Depends(get_current_user), 
+        db: Session = Depends(get_db)
+    ):
+        try:
+            from models import Book
+            user_books = (
+                db.query(Book)
+                .filter(Book.user_id == current_user.id)
+                .order_by(Book.created_at.desc())
+                .all()
+            )
+            books = [
+                {
+                    "id": str(book.id),
+                    "title": book.title,
+                    "author": book.author,
+                    "description": book.description,
+                    "createdAt": book.created_at.isoformat()
+                }
+                for book in user_books
+            ]
+            return {"books": books}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_videos(
+        self, 
+        current_user: User = Depends(get_current_user), 
+        db: Session = Depends(get_db)
+    ):
+        try:
+            from models import Video
+            user_videos = (
+                db.query(Video)
+                .filter(Video.user_id == current_user.id)
+                .order_by(Video.created_at.desc())
+                .all()
+            )
+            videos = [
+                {
+                    "id": str(video.id),
+                    "title": video.title,
+                    "url": video.url,
+                    "description": video.description,
+                    "createdAt": video.created_at.isoformat()
+                }
+                for video in user_videos
+            ]
+            return {"videos": videos}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 chat_api = ChatAPI()

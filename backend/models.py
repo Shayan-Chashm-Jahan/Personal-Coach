@@ -22,6 +22,8 @@ class User(Base):
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    books = relationship("Book", back_populates="user", cascade="all, delete-orphan")
+    videos = relationship("Video", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserProfile(Base):
@@ -91,6 +93,32 @@ class Goal(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     user = relationship("User", back_populates="goals")
+
+
+class Book(Base):
+    __tablename__ = "books"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(500), nullable=False)
+    author = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    user = relationship("User", back_populates="books")
+
+
+class Video(Base):
+    __tablename__ = "videos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(500), nullable=False)
+    url = Column(String(1000), nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    user = relationship("User", back_populates="videos")
 
 
 DATABASE_URL = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'app.db')}"

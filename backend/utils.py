@@ -106,6 +106,18 @@ class LLMStreamingClient:
         
         return response.text
     
+    def _extract_json_from_response(self, response_text: str) -> dict:
+        text = response_text.strip()
+        first_brace = text.find('{')
+        last_brace = text.rfind('}')
+        
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            json_text = text[first_brace:last_brace + 1]
+            import json
+            return json.loads(json_text)
+        else:
+            raise ValueError("No valid JSON found in response")
+    
     def _extract_list_from_response(self, content: str) -> List[str]:
         first_bracket = content.find('[')
         last_bracket = content.rfind(']')
@@ -454,6 +466,35 @@ class LLMStreamingClient:
         ]
         
         return all(field is not None and str(field).strip() != '' for field in required_fields)
+
+    def find_recommendations(self, conversation_text: str) -> dict:
+        try:
+            client = self._get_client()
+            
+            from pathlib import Path
+            prompt_path = Path(__file__).parent / "prompts" / "recommendations.md"
+            with open(prompt_path, 'r') as f:
+                prompt_template = f.read()
+            
+            prompt = prompt_template.format(conversation_text=conversation_text)
+
+            response = client.models.generate_content(
+                model=config_manager.model_name,
+                contents=prompt,
+                config={
+                    "tools": [{"googleSearch": {}}],
+                    "temperature": 0.3,
+                    "maxOutputTokens": 2000
+                }
+            )
+            
+            result = self._extract_json_from_response(response.text)
+            return result
+            
+        except Exception as e:
+            print(f"Error in find_recommendations: {e}")
+            print(f"Response text: {getattr(response, 'text', 'No response')}")
+            return {"books": [], "videos": []}
 
 
 llm_client = LLMStreamingClient()
