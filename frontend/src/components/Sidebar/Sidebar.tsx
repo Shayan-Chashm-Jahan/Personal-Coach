@@ -20,7 +20,8 @@ interface SidebarProps {
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'coach-notes'
+  NOTES: 'coach-notes',
+  MATERIAL: 'material'
 } as const
 
 export default function Sidebar({
@@ -42,6 +43,8 @@ export default function Sidebar({
         return '/goals'
       case SECTIONS.NOTES:
         return '/coach-notes'
+      case SECTIONS.MATERIAL:
+        return '/material'
       default:
         return '/chat'
     }
@@ -107,6 +110,7 @@ export default function Sidebar({
         {renderNavigationItem(SECTIONS.CHAT, 'Chat')}
         {renderNavigationItem(SECTIONS.GOALS, 'Goals')}
         {renderNavigationItem(SECTIONS.NOTES, 'Coach Notes')}
+        {renderNavigationItem(SECTIONS.MATERIAL, 'Material')}
       </nav>
       {renderChatList()}
       <div className="sidebar-footer">

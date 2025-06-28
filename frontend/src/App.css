@@ -1285,6 +1285,62 @@ html, body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
+.material-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+}
+
+.material-header {
+  padding: 24px;
+  background: #ffffff;
+}
+
+
+.material-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.material-tab {
+  background: transparent;
+  border: 2px solid #e5e5e5;
+  color: #666666;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.material-tab:hover {
+  border-color: #cccccc;
+  color: #333333;
+}
+
+.material-tab.active {
+  background: #2d3748;
+  border-color: #2d3748;
+  color: #ffffff;
+}
+
+.material-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #ffffff;
+}
+
+.material-empty {
+  text-align: center;
+  color: #666666;
+  font-size: 16px;
+}
+
 @media (max-width: 768px) {
   .notifications-container {
     bottom: 16px;

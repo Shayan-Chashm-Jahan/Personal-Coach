@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation, Link
 import ChatSection from './components/Chat/ChatSection'
 import GoalsSection from './components/Goals/GoalsSection'
 import NotesSection from './components/Notes/NotesSection'
+import Material from './components/Material/Material'
 import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenu from './components/ContextMenu/ContextMenu'
 import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog'
@@ -14,7 +15,8 @@ const API_BASE_URL = 'http://localhost:8000'
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'coach-notes'
+  NOTES: 'coach-notes',
+  MATERIAL: 'material'
 } as const
 
 interface Message {
@@ -117,6 +119,8 @@ function AppRoutes() {
       setActiveSection(SECTIONS.GOALS)
     } else if (path === '/coach-notes') {
       setActiveSection(SECTIONS.NOTES)
+    } else if (path === '/material') {
+      setActiveSection(SECTIONS.MATERIAL)
     } else if (path === '/chat' || path === '/') {
       setActiveSection(SECTIONS.CHAT)
     }
@@ -640,6 +644,8 @@ function AppRoutes() {
       navigate('/goals')
     } else if (section === SECTIONS.NOTES) {
       navigate('/coach-notes')
+    } else if (section === SECTIONS.MATERIAL) {
+      navigate('/material')
     }
   }
 
@@ -688,6 +694,8 @@ function AppRoutes() {
             onContextMenu={handleGoalContextMenu}
           />
         )
+      case SECTIONS.MATERIAL:
+        return <Material />
       default:
         return (
           <ChatSection
@@ -877,6 +885,7 @@ function App() {
         <Route path="/chat/:chat_id" element={<AppRoutes />} />
         <Route path="/goals" element={<AppRoutes />} />
         <Route path="/coach-notes" element={<AppRoutes />} />
+        <Route path="/material" element={<AppRoutes />} />
       </Routes>
     </BrowserRouter>
   )
