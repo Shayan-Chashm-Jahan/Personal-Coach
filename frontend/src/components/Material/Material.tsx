@@ -16,10 +16,14 @@ interface Video {
   createdAt: string
 }
 
+interface ValidatedVideo extends Video {
+  youtubeTitle: string
+}
+
 export default function Material() {
   const [activeTab, setActiveTab] = useState<'videos' | 'books'>('videos')
   const [books, setBooks] = useState<Book[]>([])
-  const [videos, setVideos] = useState<Video[]>([])
+  const [validVideos, setValidVideos] = useState<ValidatedVideo[]>([])
   const [loading, setLoading] = useState(true)
 
   const getYouTubeThumbnail = (url: string): string => {
@@ -38,6 +42,47 @@ export default function Material() {
       if (match) return match[1]
     }
     return null
+  }
+
+  const validateYouTubeVideo = async (url: string): Promise<string | null> => {
+    const videoId = extractYouTubeVideoId(url)
+    if (!videoId) return null
+
+    try {
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      if (response.ok) {
+        const data = await response.json()
+        return data.title || null
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  const validateVideos = async (videoList: Video[]) => {
+    const deduplicatedVideos = deduplicateVideos(videoList)
+    
+    const validationPromises = deduplicatedVideos.map(async (video) => {
+      const youtubeTitle = await validateYouTubeVideo(video.url)
+      return youtubeTitle ? { ...video, youtubeTitle } : null
+    })
+
+    const results = await Promise.all(validationPromises)
+    const filtered = results.filter((video): video is ValidatedVideo => video !== null)
+    setValidVideos(filtered)
+  }
+
+  const deduplicateVideos = (videoList: Video[]): Video[] => {
+    const seen = new Set<string>()
+    return videoList.filter((video) => {
+      const videoId = extractYouTubeVideoId(video.url)
+      if (!videoId || seen.has(videoId)) {
+        return false
+      }
+      seen.add(videoId)
+      return true
+    })
   }
 
   useEffect(() => {
@@ -62,7 +107,7 @@ export default function Material() {
         const booksData = await booksResponse.json()
         const videosData = await videosResponse.json()
         setBooks(booksData.books)
-        setVideos(videosData.videos)
+        await validateVideos(videosData.videos)
       }
     } catch (error) {
       console.error('Error fetching materials:', error)
@@ -96,9 +141,9 @@ export default function Material() {
             <p>Loading recommendations...</p>
           </div>
         ) : activeTab === 'videos' ? (
-          videos.length > 0 ? (
+          validVideos.length > 0 ? (
             <div className="material-grid">
-              {videos.map((video) => (
+              {validVideos.map((video) => (
                 <div key={video.id} className="material-card video-card">
                   {getYouTubeThumbnail(video.url) && (
                     <div className="video-thumbnail">
@@ -110,7 +155,7 @@ export default function Material() {
                     </div>
                   )}
                   <div className="video-content">
-                    <h3 className="material-title">{video.title}</h3>
+                    <h3 className="material-title">{video.youtubeTitle}</h3>
                     <p className="material-description">{video.description}</p>
                     <a 
                       href={video.url} 
