@@ -548,6 +548,7 @@ function AppRoutes() {
       if (response.ok) {
         const data = await response.json()
         saveAuthToken(data.access_token)
+        await fetchUserStatus()
       } else {
         const error = await response.json()
         throw new Error(error.detail || 'Login failed')
@@ -568,6 +569,7 @@ function AppRoutes() {
       if (response.ok) {
         const data = await response.json()
         saveAuthToken(data.access_token)
+        await fetchUserStatus()
       } else {
         const error = await response.json()
         throw new Error(error.detail || 'Registration failed')
@@ -811,7 +813,7 @@ function AppRoutes() {
   }
 
   if (isAuthenticated && initialCallCompleted === false) {
-    return <InterviewPending getAuthHeaders={getAuthHeaders} showNotification={showNotification} logout={logout} />
+    return <InterviewPending getAuthHeaders={getAuthHeaders} showNotification={showNotification} logout={logout} navigate={handleSectionChange} setInitialCallCompleted={setInitialCallCompleted} />
   }
 
   const renderNotifications = () => (

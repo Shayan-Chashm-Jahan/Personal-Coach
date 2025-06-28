@@ -370,7 +370,7 @@ class LLMStreamingClient:
                 
                 if function_calls_found:
                     if self._is_profile_complete(user_id, db):
-                        return "END"
+                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
                     
                     contents.append(response.candidates[0].content)
                     contents.append(types.Content(

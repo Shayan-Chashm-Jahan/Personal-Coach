@@ -152,6 +152,10 @@ class ChatAPI:
         @self.app.post("/api/initial-call/chat")
         async def initial_call_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.initial_call_chat(request, current_user, db)
+            
+        @self.app.post("/api/initial-call/initialize")
+        async def initialize_user_profile_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.initialize_user_profile(current_user, db)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -692,6 +696,24 @@ class ChatAPI:
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Initial call chat error: {str(e)}")
+    
+    async def initialize_user_profile(
+        self, 
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        try:
+            import time
+            time.sleep(5)
+            
+            user = db.query(User).filter(User.id == current_user.id).first()
+            if user:
+                user.initial_call_completed = True
+                db.commit()
+            
+            return {"success": True, "message": "Profile initialization completed"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Profile initialization error: {str(e)}")
     
     async def generate_title(self, request: TitleGenerateRequest):
         try:

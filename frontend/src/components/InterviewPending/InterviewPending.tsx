@@ -18,6 +18,8 @@ interface InterviewPendingProps {
     type: "error" | "success" | "info"
   ) => void;
   logout: () => void;
+  navigate: (section: string) => void;
+  setInitialCallCompleted: (completed: boolean) => void;
 }
 
 const API_BASE_URL = "http://localhost:8000";
@@ -26,10 +28,14 @@ export default function InterviewPending({
   getAuthHeaders,
   showNotification,
   logout,
+  navigate,
+  setInitialCallCompleted,
 }: InterviewPendingProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showCompletionButton, setShowCompletionButton] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +71,32 @@ export default function InterviewPending({
       .replace(/\n\n\n+/g, "\n\n");
   };
 
+  const startInitialization = async (): Promise<void> => {
+    try {
+      setIsInitializing(true);
+      const response = await fetch(`${API_BASE_URL}/api/initial-call/initialize`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        setIsInitializing(false);
+      } else if (response.status === 401) {
+        logout();
+      } else {
+        throw new Error("Failed to initialize profile");
+      }
+    } catch (error) {
+      showNotification("Failed to initialize profile", "error");
+      setIsInitializing(false);
+    }
+  };
+
+  const handleStartJourney = (): void => {
+    setInitialCallCompleted(true);
+    navigate("chat");
+  };
+
   const processChunk = (line: string, coachMessageIndex: number): boolean => {
     if (!line.startsWith("data: ")) return false;
 
@@ -79,10 +111,16 @@ export default function InterviewPending({
             const newMessages = [...prev];
             if (newMessages[coachMessageIndex]) {
               const currentText = newMessages[coachMessageIndex].text;
+              const newText = currentText + parsed.chunk;
               newMessages[coachMessageIndex] = {
                 ...newMessages[coachMessageIndex],
-                text: currentText + parsed.chunk,
+                text: newText,
               };
+              
+              if (newText.includes("It was wonderful getting to know you!") && newText.includes("Let me prepare everything for our journey ahead!")) {
+                setShowCompletionButton(true);
+                startInitialization();
+              }
             }
             return newMessages;
           });
@@ -284,27 +322,39 @@ export default function InterviewPending({
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="initial-call-input-container">
-          <div className="initial-call-input-field">
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Tell me about yourself..."
-              className="initial-call-message-input"
-              rows={1}
-              style={{ resize: "none", overflow: "hidden" }}
-            />
+        {showCompletionButton ? (
+          <div className="completion-button-container">
             <button
-              onClick={sendMessage}
-              disabled={isLoading || !inputValue.trim()}
-              className="initial-call-send-button"
+              onClick={handleStartJourney}
+              disabled={isInitializing}
+              className="completion-button"
             >
-              {isLoading ? "..." : "→"}
+              {isInitializing ? "Preparing..." : "Let's start!"}
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="initial-call-input-container">
+            <div className="initial-call-input-field">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Tell me about yourself..."
+                className="initial-call-message-input"
+                rows={1}
+                style={{ resize: "none", overflow: "hidden" }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={isLoading || !inputValue.trim()}
+                className="initial-call-send-button"
+              >
+                {isLoading ? "..." : "→"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
