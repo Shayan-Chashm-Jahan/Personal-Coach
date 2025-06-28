@@ -20,9 +20,16 @@ interface ValidatedVideo extends Video {
   youtubeTitle: string
 }
 
+interface ValidatedBook extends Book {
+  coverUrl: string | null
+  dominantColor: string | null
+  googleTitle: string | null
+  bookUrl: string | null
+}
+
 export default function Material() {
   const [activeTab, setActiveTab] = useState<'videos' | 'books'>('videos')
-  const [books, setBooks] = useState<Book[]>([])
+  const [validBooks, setValidBooks] = useState<ValidatedBook[]>([])
   const [validVideos, setValidVideos] = useState<ValidatedVideo[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -85,6 +92,178 @@ export default function Material() {
     })
   }
 
+  const fetchBookData = async (title: string, author: string): Promise<{ coverUrl: string | null; googleTitle: string | null; bookUrl: string | null }> => {
+    try {
+      const query = `${title} ${author}`.replace(/[^\w\s]/g, '').trim()
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        const book = data.items?.[0]
+        const imageLinks = book?.volumeInfo?.imageLinks
+        const googleTitle = book?.volumeInfo?.title || null
+        const coverUrl = imageLinks?.thumbnail || imageLinks?.smallThumbnail || null
+        
+        const bookUrl = book?.volumeInfo?.infoLink || null
+        
+        return { coverUrl, googleTitle, bookUrl }
+      }
+      return { coverUrl: null, googleTitle: null, bookUrl: null }
+    } catch {
+      return { coverUrl: null, googleTitle: null, bookUrl: null }
+    }
+  }
+
+  const deriveBackgroundColor = (r: number, g: number, b: number): string => {
+    const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => {
+      r /= 255
+      g /= 255
+      b /= 255
+      
+      const max = Math.max(r, g, b)
+      const min = Math.min(r, g, b)
+      let h = 0, s = 0, l = (max + min) / 2
+      
+      if (max !== min) {
+        const d = max - min
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+        
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break
+          case g: h = (b - r) / d + 2; break
+          case b: h = (r - g) / d + 4; break
+        }
+        h /= 6
+      }
+      
+      return [h * 360, s, l]
+    }
+    
+    const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
+      h /= 360
+      
+      const hue2rgb = (p: number, q: number, t: number): number => {
+        if (t < 0) t += 1
+        if (t > 1) t -= 1
+        if (t < 1/6) return p + (q - p) * 6 * t
+        if (t < 1/2) return q
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
+        return p
+      }
+      
+      if (s === 0) {
+        return [l * 255, l * 255, l * 255]
+      }
+      
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+      const p = 2 * l - q
+      
+      return [
+        Math.round(hue2rgb(p, q, h + 1/3) * 255),
+        Math.round(hue2rgb(p, q, h) * 255),
+        Math.round(hue2rgb(p, q, h - 1/3) * 255)
+      ]
+    }
+    
+    const [h, s, l] = rgbToHsl(r, g, b)
+    
+    const newS = Math.max(0.15, s * 0.3)
+    const newL = Math.min(0.95, Math.max(0.85, l + 0.4))
+    
+    const [newR, newG, newB] = hslToRgb(h, newS, newL)
+    return `rgb(${newR}, ${newG}, ${newB})`
+  }
+
+  const extractDominantColor = (imageUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve('#f5f5f5')
+            return
+          }
+
+          canvas.width = img.width
+          canvas.height = img.height
+          ctx.drawImage(img, 0, 0)
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const data = imageData.data
+          const colorMap: { [key: string]: number } = {}
+
+          for (let i = 0; i < data.length; i += 16) {
+            const r = data[i]
+            const g = data[i + 1]
+            const b = data[i + 2]
+            const alpha = data[i + 3]
+            
+            if (alpha > 128) {
+              const color = `${Math.floor(r / 32) * 32},${Math.floor(g / 32) * 32},${Math.floor(b / 32) * 32}`
+              colorMap[color] = (colorMap[color] || 0) + 1
+            }
+          }
+
+          if (Object.keys(colorMap).length === 0) {
+            resolve('#f5f5f5')
+            return
+          }
+
+          const dominantColor = Object.keys(colorMap).reduce((a, b) => 
+            colorMap[a] > colorMap[b] ? a : b
+          )
+          
+          const [r, g, b] = dominantColor.split(',').map(Number)
+          const derivedColor = deriveBackgroundColor(r, g, b)
+          resolve(derivedColor)
+        } catch (error) {
+          resolve('#f5f5f5')
+        }
+      }
+
+      img.onerror = () => {
+        resolve('#f5f5f5')
+      }
+      
+      const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}`
+      img.src = proxyUrl
+    })
+  }
+
+  const validateBooks = async (bookList: Book[]) => {
+    const deduplicatedBooks = deduplicateBooks(bookList)
+    
+    const validationPromises = deduplicatedBooks.map(async (book) => {
+      const { coverUrl, googleTitle, bookUrl } = await fetchBookData(book.title, book.author || '')
+      let dominantColor = null
+      
+      if (coverUrl) {
+        dominantColor = await extractDominantColor(coverUrl)
+      }
+      
+      return { ...book, coverUrl, dominantColor, googleTitle, bookUrl }
+    })
+
+    const results = await Promise.all(validationPromises)
+    setValidBooks(results)
+  }
+
+  const deduplicateBooks = (bookList: Book[]): Book[] => {
+    const seen = new Set<string>()
+    return bookList.filter((book) => {
+      const key = `${book.title.toLowerCase()}-${(book.author || '').toLowerCase()}`
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+      return true
+    })
+  }
+
   useEffect(() => {
     fetchMaterials()
   }, [])
@@ -106,8 +285,10 @@ export default function Material() {
       if (booksResponse.ok && videosResponse.ok) {
         const booksData = await booksResponse.json()
         const videosData = await videosResponse.json()
-        setBooks(booksData.books)
-        await validateVideos(videosData.videos)
+        await Promise.all([
+          validateBooks(booksData.books),
+          validateVideos(videosData.videos)
+        ])
       }
     } catch (error) {
       console.error('Error fetching materials:', error)
@@ -175,13 +356,44 @@ export default function Material() {
             </div>
           )
         ) : (
-          books.length > 0 ? (
+          validBooks.length > 0 ? (
             <div className="material-grid">
-              {books.map((book) => (
-                <div key={book.id} className="material-card">
-                  <h3 className="material-title">{book.title}</h3>
-                  <p className="material-author">by {book.author}</p>
-                  <p className="material-description">{book.description}</p>
+              {validBooks.map((book) => (
+                <div key={book.id} className="material-card book-card">
+                  {book.coverUrl ? (
+                    <div 
+                      className="book-cover"
+                      style={{ backgroundColor: book.dominantColor || '#f5f5f5' }}
+                    >
+                      <img 
+                        src={book.coverUrl} 
+                        alt={book.title}
+                        className="cover-image"
+                      />
+                    </div>
+                  ) : (
+                    <div className="book-cover no-cover">
+                      <div className="no-cover-placeholder">
+                        <span>📚</span>
+                        <p>No Cover</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="book-content">
+                    <h3 className="material-title">{book.googleTitle || book.title}</h3>
+                    <p className="material-author">by {book.author}</p>
+                    <p className="material-description">{book.description}</p>
+                    {book.bookUrl && (
+                      <a 
+                        href={book.bookUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="material-link"
+                      >
+                        View Book
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
