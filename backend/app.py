@@ -50,6 +50,10 @@ class GoalCreate(BaseModel):
     title: str
     description: str
 
+class BookSummaryRequest(BaseModel):
+    title: str
+    author: str
+
 
 security = HTTPBearer()
 
@@ -164,6 +168,10 @@ class ChatAPI:
         @self.app.get("/api/videos")
         async def get_videos_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_videos(current_user, db)
+            
+        @self.app.post("/api/books/summary")
+        async def generate_book_summary_route(request: BookSummaryRequest, current_user: User = Depends(self.get_current_user)):
+            return await self.generate_book_summary(request)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -891,6 +899,13 @@ class ChatAPI:
             return {"videos": videos}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+    
+    async def generate_book_summary(self, request: BookSummaryRequest):
+        try:
+            chapters = llm_client.generate_book_summary(request.title, request.author)
+            return {"chapters": chapters}
+        except Exception:
+            return {"chapters": []}
 
 
 chat_api = ChatAPI()

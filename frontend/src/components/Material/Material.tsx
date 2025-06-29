@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 
 interface Book {
   id: string
@@ -39,6 +40,8 @@ export default function Material() {
     isOpen: false,
     book: null
   })
+  const [bookSummary, setBookSummary] = useState<{ chapter: string; content: string }[]>([])
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -285,6 +288,37 @@ export default function Material() {
     }
   }, [location.pathname])
 
+  const fetchBookSummary = async (book: ValidatedBook) => {
+    setSummaryLoading(true)
+    setBookSummary([])
+    
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) return
+      
+      const response = await fetch('/api/books/summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: book.googleTitle || book.title,
+          author: book.author || ''
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setBookSummary(data.chapters || [])
+      }
+    } catch (error) {
+      console.error('Error fetching book summary:', error)
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
+
   const fetchMaterials = async () => {
     try {
       const token = localStorage.getItem('auth_token')
@@ -384,7 +418,10 @@ export default function Material() {
                       )}
                       <button 
                         className="material-link discuss-book-button"
-                        onClick={() => setDiscussModal({ isOpen: true, book })}
+                        onClick={() => {
+                          setDiscussModal({ isOpen: true, book })
+                          fetchBookSummary(book)
+                        }}
                       >
                         Discuss
                       </button>
@@ -440,12 +477,42 @@ export default function Material() {
           <div className="discuss-modal" onClick={(e) => e.stopPropagation()}>
             <button 
               className="discuss-modal-close"
-              onClick={() => setDiscussModal({ isOpen: false, book: null })}
+              onClick={() => {
+                setDiscussModal({ isOpen: false, book: null })
+                setBookSummary([])
+              }}
             >
               ×
             </button>
             <div className="discuss-modal-content">
+              {discussModal.book && (
+                <div className="book-summary-header">
+                  <h2>{discussModal.book.googleTitle || discussModal.book.title}</h2>
+                  <p className="book-summary-author">by {discussModal.book.author}</p>
+                </div>
+              )}
               
+              {summaryLoading ? (
+                <div className="summary-loading">
+                  <div className="loading-dots">
+                    <span className="loading-dot"></span>
+                    <span className="loading-dot"></span>
+                    <span className="loading-dot"></span>
+                  </div>
+                  <p className="loading-text">Generating chapter summaries...</p>
+                </div>
+              ) : (
+                <div className="chapters-container">
+                  {bookSummary.map((chapter, index) => (
+                    <div key={index} className="chapter-section">
+                      <h3 className="chapter-title">{chapter.chapter}</h3>
+                      <div className="chapter-content">
+                        <ReactMarkdown>{chapter.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

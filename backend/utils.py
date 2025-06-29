@@ -494,6 +494,42 @@ class LLMStreamingClient:
             return {"books": [], "videos": []}
 
 
+    def generate_book_summary(self, book_title: str, author: str) -> list:
+        try:
+            from pathlib import Path
+            prompt_path = Path(__file__).parent / "prompts" / "book_summary.md"
+            with open(prompt_path, 'r') as f:
+                prompt_template = f.read()
+            
+            prompt = prompt_template.format(book_title=book_title, author=author)
+            
+            client = self._get_client()
+            response = client.models.generate_content(
+                model=config_manager.model_fast,
+                contents=prompt,
+                config={
+                    "temperature": 0.3,
+                    "maxOutputTokens": 4000
+                }
+            )
+            
+            if response and response.text:
+                text = response.text.strip()
+                first_bracket = text.find('[')
+                last_bracket = text.rfind(']')
+                
+                if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
+                    json_text = text[first_bracket:last_bracket + 1]
+                    import json
+                    result = json.loads(json_text)
+                    return result
+            
+            return []
+            
+        except Exception as e:
+            return []
+
+
 llm_client = LLMStreamingClient()
 
 
