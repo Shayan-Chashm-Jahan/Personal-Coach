@@ -942,26 +942,48 @@ class ChatAPI:
             from models import Book
             import json
             
+            print(f"\n=== BOOK SUMMARY REQUEST ===")
+            print(f"Title: {request.title}")
+            print(f"Author: {request.author}")
+            print(f"User ID: {current_user.id}")
+            
             book = db.query(Book).filter(
                 Book.user_id == current_user.id,
                 Book.title == request.title
             ).first()
             
+            if book:
+                print(f"Book found in DB: ID={book.id}, Has summary: {bool(book.summary)}")
+            else:
+                print("Book NOT found in database")
+            
             if book and book.summary:
                 try:
                     chapters = json.loads(book.summary)
+                    print(f"Returning cached summary with {len(chapters)} chapters")
                     return {"chapters": chapters}
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    print(f"ERROR: Failed to parse cached summary: {e}")
                     pass
             
+            print("Generating new summary via AI...")
             chapters = llm_client.generate_book_summary(request.title, request.author)
             
             if book and chapters:
+                print(f"Saving {len(chapters)} chapters to database")
                 book.summary = json.dumps(chapters)
                 db.commit()
+                print("Summary saved successfully")
+            elif not book:
+                print("WARNING: Cannot save summary - book not found in database")
+            elif not chapters:
+                print("WARNING: Cannot save summary - no chapters generated")
             
             return {"chapters": chapters}
-        except Exception:
+        except Exception as e:
+            print(f"\nERROR in generate_book_summary endpoint: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {"chapters": []}
 
 

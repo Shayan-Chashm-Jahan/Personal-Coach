@@ -512,6 +512,16 @@ class LLMStreamingClient:
                 }
             )
             
+            print(f"\n=== BOOK SUMMARY GENERATION ===")
+            print(f"Book: {book_title} by {author}")
+            print(f"\n=== RAW MODEL RESPONSE ===")
+            print(f"Response object: {response}")
+            if response:
+                print(f"Has text: {hasattr(response, 'text')}")
+                if hasattr(response, 'text'):
+                    print(f"\nResponse text:\n{response.text}")
+                    print(f"\nText length: {len(response.text) if response.text else 0}")
+            print(f"=== END RAW RESPONSE ===\n")
             
             if response and response.text:
                 text = response.text.strip()
@@ -531,13 +541,25 @@ class LLMStreamingClient:
                 
                 if first_bracket != -1 and last_bracket != -1 and last_bracket > first_bracket:
                     json_text = text[first_bracket:last_bracket + 1]
+                    print(f"\nExtracted JSON text (first 500 chars): {json_text[:500]}...")
+                    print(f"JSON text length: {len(json_text)}")
                     import json
                     result = json.loads(json_text)
+                    print(f"\nSuccessfully parsed JSON. Number of chapters: {len(result)}")
                     return result
+                else:
+                    print(f"\nERROR: Could not find valid JSON brackets in response")
+                    print(f"First bracket position: {first_bracket}")
+                    print(f"Last bracket position: {last_bracket}")
+            else:
+                print(f"\nERROR: No response or no response.text")
             
             return []
             
-        except Exception:
+        except Exception as e:
+            print(f"\nERROR in generate_book_summary: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return []
 
 
