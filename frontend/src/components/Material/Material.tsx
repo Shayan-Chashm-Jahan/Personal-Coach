@@ -31,7 +31,7 @@ interface ValidatedBook extends Book {
 export default function Material() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [activeTab, setActiveTab] = useState<'videos' | 'books'>('videos')
+  const [activeTab, setActiveTab] = useState<'books' | 'videos'>('books')
   const [validBooks, setValidBooks] = useState<ValidatedBook[]>([])
   const [validVideos, setValidVideos] = useState<ValidatedVideo[]>([])
   const [loading, setLoading] = useState(true)
@@ -277,7 +277,7 @@ export default function Material() {
     } else if (location.pathname === '/material/videos') {
       setActiveTab('videos')
     } else if (location.pathname === '/material') {
-      setActiveTab('videos')
+      setActiveTab('books')
     }
   }, [location.pathname])
 
@@ -315,16 +315,16 @@ export default function Material() {
       <div className="material-tabs-container">
         <div className="material-tabs">
           <button
-            className={`material-tab ${activeTab === 'videos' ? 'active' : ''}`}
-            onClick={() => navigate('/material/videos')}
-          >
-            Videos
-          </button>
-          <button
             className={`material-tab ${activeTab === 'books' ? 'active' : ''}`}
             onClick={() => navigate('/material/books')}
           >
             Books
+          </button>
+          <button
+            className={`material-tab ${activeTab === 'videos' ? 'active' : ''}`}
+            onClick={() => navigate('/material/videos')}
+          >
+            Videos
           </button>
         </div>
       </div>
@@ -339,41 +339,7 @@ export default function Material() {
             </div>
             <p className="loading-text">Loading recommendations</p>
           </div>
-        ) : activeTab === 'videos' ? (
-          validVideos.length > 0 ? (
-            <div className="material-grid">
-              {validVideos.map((video) => (
-                <div key={video.id} className="material-card video-card">
-                  {getYouTubeThumbnail(video.url) && (
-                    <div className="video-thumbnail">
-                      <img 
-                        src={getYouTubeThumbnail(video.url)} 
-                        alt={video.title}
-                        className="thumbnail-image"
-                      />
-                    </div>
-                  )}
-                  <div className="video-content">
-                    <h3 className="material-title">{video.youtubeTitle}</h3>
-                    <p className="material-description">{video.description}</p>
-                    <a 
-                      href={video.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="material-link"
-                    >
-                      Watch Video
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="material-empty">
-              <p>No videos available yet</p>
-            </div>
-          )
-        ) : (
+        ) : activeTab === 'books' ? (
           validBooks.length > 0 ? (
             <div className="material-grid">
               {validBooks.map((book) => (
@@ -418,6 +384,40 @@ export default function Material() {
           ) : (
             <div className="material-empty">
               <p>No books available yet</p>
+            </div>
+          )
+        ) : (
+          validVideos.length > 0 ? (
+            <div className="material-grid">
+              {validVideos.map((video) => (
+                <div key={video.id} className="material-card video-card">
+                  {getYouTubeThumbnail(video.url) && (
+                    <div className="video-thumbnail">
+                      <img 
+                        src={getYouTubeThumbnail(video.url)} 
+                        alt={video.title}
+                        className="thumbnail-image"
+                      />
+                    </div>
+                  )}
+                  <div className="video-content">
+                    <h3 className="material-title">{video.youtubeTitle}</h3>
+                    <p className="material-description">{video.description}</p>
+                    <a 
+                      href={video.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="material-link"
+                    >
+                      Watch Video
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="material-empty">
+              <p>No videos available yet</p>
             </div>
           )
         )}
