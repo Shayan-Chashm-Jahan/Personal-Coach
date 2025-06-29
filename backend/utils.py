@@ -400,8 +400,7 @@ class LLMStreamingClient:
             
             return response.text if response.text else ""
             
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        except Exception:
             raise
     
     def _handle_update_user_profile(self, args: dict, user_id: int, db: Session):
@@ -491,9 +490,7 @@ class LLMStreamingClient:
             result = self._extract_json_from_response(response.text)
             return result
             
-        except Exception as e:
-            print(f"Error in find_recommendations: {e}")
-            print(f"Response text: {getattr(response, 'text', 'No response')}")
+        except Exception:
             return {"books": [], "videos": []}
 
 

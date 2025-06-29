@@ -298,8 +298,8 @@ export default function Material() {
   }
 
   return (
-    <div className="material-section">
-      <div className="material-header">
+    <div className="section-content">
+      <div className="material-tabs-container">
         <div className="material-tabs">
           <button
             className={`material-tab ${activeTab === 'videos' ? 'active' : ''}`}

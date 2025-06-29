@@ -80,7 +80,7 @@ export default function InterviewPending({
       });
 
       if (response.ok) {
-        const result = await response.json();
+        await response.json();
         setIsInitializing(false);
       } else if (response.status === 401) {
         logout();

@@ -792,19 +792,12 @@ class ChatAPI:
         try:
             from pathlib import Path
             prompt_path = Path(__file__).parent / "prompts" / "title_generation.md"
-            print(f"Loading prompt from: {prompt_path}")
-            
             with open(prompt_path, "r") as f:
                 prompt_template = f.read()
-            print(f"Prompt template loaded, length: {len(prompt_template)}")
             
             prompt = prompt_template.format(user_message=request.message)
-            print(f"Formatted prompt length: {len(prompt)}")
             
             client = llm_client._get_client()
-            print(f"Client initialized: {client is not None}")
-            
-            print(f"Calling generate_content with model: {config_manager.model_super_fast}")
             response = client.models.generate_content(
                 model=config_manager.model_super_fast,
                 contents=prompt,
@@ -812,11 +805,8 @@ class ChatAPI:
                     "temperature": 0.7
                 }
             )
-            print(f"Response received: {response}")
-            print(f"Response type: {type(response)}")
             
             if not response:
-                print("ERROR: Response is None or False")
                 raise ValueError("No response from API")
             
             title = ""
@@ -824,13 +814,9 @@ class ChatAPI:
                 candidate = response.candidates[0]
                 if candidate.content and candidate.content.parts:
                     title = candidate.content.parts[0].text.strip()
-                    print(f"Extracted title from parts: '{title}'")
-                else:
-                    print(f"No parts in content. Finish reason: {candidate.finish_reason}")
             
             if not title and hasattr(response, 'text'):
                 title = response.text.strip() if response.text else ""
-                print(f"Extracted title from response.text: '{title}'")
             
             if title.startswith('"') and title.endswith('"'):
                 title = title[1:-1]
@@ -838,25 +824,18 @@ class ChatAPI:
                 title = title[1:-1]
             
             if not title or len(title) > 50:
-                print(f"Title empty or too long, using fallback")
                 words = request.message.split()[:5]
                 title = " ".join(words)
                 if len(title) > 30:
                     title = title[:27] + "..."
             
-            print(f"Final title: '{title}'")
             return {"title": title}
             
-        except Exception as e:
-            print(f"ERROR in generate_title: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
+        except Exception:
             words = request.message.split()[:5]
             title = " ".join(words)
             if len(title) > 30:
                 title = title[:27] + "..."
-            print(f"Fallback title: '{title}'")
             return {"title": title}
     
     async def get_books(

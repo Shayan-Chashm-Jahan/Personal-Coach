@@ -632,7 +632,8 @@ function AppRoutes() {
     const titles: Record<string, string> = {
       [SECTIONS.CHAT]: 'Chat',
       [SECTIONS.GOALS]: 'Goals',
-      [SECTIONS.NOTES]: 'Coach Notes'
+      [SECTIONS.NOTES]: 'Coach Notes',
+      [SECTIONS.MATERIAL]: 'Material'
     }
     return titles[activeSection] || 'Chat'
   }
