@@ -119,7 +119,7 @@ function AppRoutes() {
       setActiveSection(SECTIONS.GOALS)
     } else if (path === '/coach-notes') {
       setActiveSection(SECTIONS.NOTES)
-    } else if (path === '/material') {
+    } else if (path.startsWith('/material')) {
       setActiveSection(SECTIONS.MATERIAL)
     } else if (path === '/chat' || path === '/') {
       setActiveSection(SECTIONS.CHAT)
@@ -646,7 +646,11 @@ function AppRoutes() {
     } else if (section === SECTIONS.NOTES) {
       navigate('/coach-notes')
     } else if (section === SECTIONS.MATERIAL) {
-      navigate('/material')
+      if (location.pathname.startsWith('/material/')) {
+        navigate(location.pathname)
+      } else {
+        navigate('/material')
+      }
     }
   }
 
@@ -887,6 +891,8 @@ function App() {
         <Route path="/goals" element={<AppRoutes />} />
         <Route path="/coach-notes" element={<AppRoutes />} />
         <Route path="/material" element={<AppRoutes />} />
+        <Route path="/material/videos" element={<AppRoutes />} />
+        <Route path="/material/books" element={<AppRoutes />} />
       </Routes>
     </BrowserRouter>
   )

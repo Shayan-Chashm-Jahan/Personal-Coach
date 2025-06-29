@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 interface Book {
   id: string
@@ -28,6 +29,8 @@ interface ValidatedBook extends Book {
 }
 
 export default function Material() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [activeTab, setActiveTab] = useState<'videos' | 'books'>('videos')
   const [validBooks, setValidBooks] = useState<ValidatedBook[]>([])
   const [validVideos, setValidVideos] = useState<ValidatedVideo[]>([])
@@ -268,6 +271,16 @@ export default function Material() {
     fetchMaterials()
   }, [])
 
+  useEffect(() => {
+    if (location.pathname === '/material/books') {
+      setActiveTab('books')
+    } else if (location.pathname === '/material/videos') {
+      setActiveTab('videos')
+    } else if (location.pathname === '/material') {
+      setActiveTab('videos')
+    }
+  }, [location.pathname])
+
   const fetchMaterials = async () => {
     try {
       const token = localStorage.getItem('auth_token')
@@ -303,13 +316,13 @@ export default function Material() {
         <div className="material-tabs">
           <button
             className={`material-tab ${activeTab === 'videos' ? 'active' : ''}`}
-            onClick={() => setActiveTab('videos')}
+            onClick={() => navigate('/material/videos')}
           >
             Videos
           </button>
           <button
             className={`material-tab ${activeTab === 'books' ? 'active' : ''}`}
-            onClick={() => setActiveTab('books')}
+            onClick={() => navigate('/material/books')}
           >
             Books
           </button>
