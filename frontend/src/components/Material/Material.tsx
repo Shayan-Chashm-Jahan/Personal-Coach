@@ -319,7 +319,12 @@ export default function Material() {
       <div className="material-content">
         {loading ? (
           <div className="material-loading">
-            <p>Loading recommendations...</p>
+            <div className="loading-dots">
+              <span className="loading-dot"></span>
+              <span className="loading-dot"></span>
+              <span className="loading-dot"></span>
+            </div>
+            <p className="loading-text">Loading recommendations</p>
           </div>
         ) : activeTab === 'videos' ? (
           validVideos.length > 0 ? (
