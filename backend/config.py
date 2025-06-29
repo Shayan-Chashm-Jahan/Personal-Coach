@@ -11,7 +11,9 @@ class ConfigManager:
         if not self.project_id:
             raise ValueError("GCP_PROJECT_ID environment variable is required")
         
-        self.model_name = "gemini-2.5-pro"
+        self.model_pro = "gemini-2.5-pro"
+        self.model_fast = "gemini-2.5-flash"
+        self.model_super_fast = "gemini-2.0-flash"
         self.location = "us-central1"
         self.temperature = 0.7
         self.max_tokens = 2048

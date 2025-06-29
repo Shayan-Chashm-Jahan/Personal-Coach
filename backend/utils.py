@@ -96,7 +96,7 @@ class LLMStreamingClient:
         
         client = self._get_client()
         response = client.models.generate_content(
-            model=config_manager.model_name,
+            model=config_manager.model_pro,
             contents=summary_prompt,
             config={
                 "temperature": 0.3,
@@ -144,7 +144,7 @@ class LLMStreamingClient:
         try:
             client = self._get_client()
             response = client.models.generate_content(
-                model=config_manager.model_name,
+                model=config_manager.model_pro,
                 contents=memory_prompt,
                 config={
                     "temperature": 0.2,
@@ -283,7 +283,7 @@ class LLMStreamingClient:
             contents = self._build_contents(text, history, user_id, db)
             
             response_stream = client.models.generate_content_stream(
-                model=config_manager.model_name,
+                model=config_manager.model_pro,
                 contents=contents,
                 config={
                     "tools": [{"googleSearch": {}}],
@@ -355,7 +355,7 @@ class LLMStreamingClient:
             config = types.GenerateContentConfig(tools=[tools])
             
             response = client.models.generate_content(
-                model=config_manager.model_name,
+                model=config_manager.model_pro,
                 contents=contents,
                 config=config, 
             )
@@ -391,7 +391,7 @@ class LLMStreamingClient:
                     ))
                     
                     final_response = client.models.generate_content(
-                        model=config_manager.model_name,
+                        model=config_manager.model_pro,
                         contents=contents,
                         config=config
                     )
@@ -479,7 +479,7 @@ class LLMStreamingClient:
             prompt = prompt_template.format(conversation_text=conversation_text)
 
             response = client.models.generate_content(
-                model=config_manager.model_name,
+                model=config_manager.model_pro,
                 contents=prompt,
                 config={
                     "tools": [{"googleSearch": {}}],
