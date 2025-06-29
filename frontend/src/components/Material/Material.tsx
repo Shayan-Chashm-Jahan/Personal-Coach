@@ -35,6 +35,10 @@ export default function Material() {
   const [validBooks, setValidBooks] = useState<ValidatedBook[]>([])
   const [validVideos, setValidVideos] = useState<ValidatedVideo[]>([])
   const [loading, setLoading] = useState(true)
+  const [discussModal, setDiscussModal] = useState<{ isOpen: boolean; book: ValidatedBook | null }>({
+    isOpen: false,
+    book: null
+  })
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -380,7 +384,7 @@ export default function Material() {
                       )}
                       <button 
                         className="material-link discuss-book-button"
-                        onClick={() => {}}
+                        onClick={() => setDiscussModal({ isOpen: true, book })}
                       >
                         Discuss
                       </button>
@@ -430,6 +434,22 @@ export default function Material() {
           )
         )}
       </div>
+      
+      {discussModal.isOpen && (
+        <div className="discuss-modal-overlay" onClick={() => setDiscussModal({ isOpen: false, book: null })}>
+          <div className="discuss-modal" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="discuss-modal-close"
+              onClick={() => setDiscussModal({ isOpen: false, book: null })}
+            >
+              ×
+            </button>
+            <div className="discuss-modal-content">
+              
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
