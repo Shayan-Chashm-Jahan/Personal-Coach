@@ -223,6 +223,8 @@ export default function ChatSection({
     setInputValue("");
     setIsLoading(true);
     await addMessage(messageText, "user");
+    
+    setMessages((prev) => [...prev, { text: "", sender: "coach" }]);
 
     if ((isNewChat || isFirstMessageInChat) && chatId) {
       const newTitle = await generateChatTitle(messageText);
@@ -230,6 +232,7 @@ export default function ChatSection({
     }
 
     try {
+      setMessages((prev) => prev.slice(0, -1));
       await streamResponse(messageText, conversationHistory);
     } catch (error) {
       const errorMessage =
@@ -237,7 +240,7 @@ export default function ChatSection({
 
       if (errorMessage.startsWith("AUTH_ERROR:")) {
         showNotification("Session expired. Please log in again.", "error");
-        setMessages((prev) => prev.slice(0, -1));
+        setMessages((prev) => prev.slice(0, -2));
         setTimeout(() => logout(), 2000);
       } else {
         showNotification(errorMessage, "error");
