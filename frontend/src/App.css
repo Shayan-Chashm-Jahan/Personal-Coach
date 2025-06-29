@@ -1434,12 +1434,38 @@ html, body {
   transition: background-color 0.2s ease;
   text-align: center;
   margin-top: auto;
+  line-height: 1.5;
+  box-sizing: border-box;
 }
 
 .material-link:hover {
   background: #1a202c;
   color: #ffffff;
   text-decoration: none;
+}
+
+.book-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  align-items: stretch;
+}
+
+.book-actions .material-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  min-height: 36px;
+}
+
+.discuss-book-button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  margin: 0;
+  outline: none;
 }
 
 .video-card {

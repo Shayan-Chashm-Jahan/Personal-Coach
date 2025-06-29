@@ -367,16 +367,24 @@ export default function Material() {
                     <h3 className="material-title">{book.googleTitle || book.title}</h3>
                     <p className="material-author">by {book.author}</p>
                     <p className="material-description">{book.description}</p>
-                    {book.bookUrl && (
-                      <a 
-                        href={book.bookUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="material-link"
+                    <div className="book-actions">
+                      {book.bookUrl && (
+                        <a 
+                          href={book.bookUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="material-link"
+                        >
+                          View Book
+                        </a>
+                      )}
+                      <button 
+                        className="material-link discuss-book-button"
+                        onClick={() => {}}
                       >
-                        View Book
-                      </a>
-                    )}
+                        Discuss
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
