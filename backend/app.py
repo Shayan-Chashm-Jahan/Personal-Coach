@@ -170,8 +170,8 @@ class ChatAPI:
             return await self.get_videos(current_user, db)
             
         @self.app.post("/api/books/summary")
-        async def generate_book_summary_route(request: BookSummaryRequest, current_user: User = Depends(self.get_current_user)):
-            return await self.generate_book_summary(request)
+        async def generate_book_summary_route(request: BookSummaryRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.generate_book_summary(request, current_user, db)
     
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -749,6 +749,27 @@ class ChatAPI:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Initial call chat error: {str(e)}")
     
+    def _fetch_book_from_google(self, title: str, author: str) -> Optional[dict]:
+        import requests
+        
+        try:
+            query = f"{title} {author}".strip()
+            url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1"
+            
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("items"):
+                    book = data["items"][0]["volumeInfo"]
+                    return {
+                        "google_title": book.get("title", ""),
+                        "google_author": ", ".join(book.get("authors", [])),
+                        "google_description": book.get("description", "")[:500] if book.get("description") else ""
+                    }
+            return None
+        except Exception:
+            return None
+
     async def initialize_user_profile(
         self, 
         current_user: User = Depends(get_current_user),
@@ -756,6 +777,7 @@ class ChatAPI:
     ):
         try:
             from models import Message, Book, Video
+            import requests
             
             user = db.query(User).filter(User.id == current_user.id).first()
             if not user:
@@ -771,14 +793,29 @@ class ChatAPI:
             if conversation_text.strip():
                 recommendations = llm_client.find_recommendations(conversation_text)
                 
+                seen_books = set()
+                
                 for book_data in recommendations.get("books", []):
-                    book = Book(
-                        title=book_data.get("title", ""),
-                        author=book_data.get("author", ""),
-                        description=book_data.get("description", ""),
-                        user_id=current_user.id
-                    )
-                    db.add(book)
+                    title = book_data.get("title", "")
+                    author = book_data.get("author", "")
+                    
+                    if not title:
+                        continue
+                    
+                    book_key = f"{title.lower()}-{author.lower()}"
+                    if book_key in seen_books:
+                        continue
+                    
+                    google_data = self._fetch_book_from_google(title, author)
+                    if google_data:
+                        book = Book(
+                            title=google_data["google_title"],
+                            author=google_data["google_author"] or author,
+                            description=book_data.get("description", ""),
+                            user_id=current_user.id
+                        )
+                        db.add(book)
+                        seen_books.add(book_key)
                 
                 for video_data in recommendations.get("videos", []):
                     video = Video(
@@ -900,9 +937,29 @@ class ChatAPI:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
-    async def generate_book_summary(self, request: BookSummaryRequest):
+    async def generate_book_summary(self, request: BookSummaryRequest, current_user: User, db: Session):
         try:
+            from models import Book
+            import json
+            
+            book = db.query(Book).filter(
+                Book.user_id == current_user.id,
+                Book.title == request.title
+            ).first()
+            
+            if book and book.summary:
+                try:
+                    chapters = json.loads(book.summary)
+                    return {"chapters": chapters}
+                except json.JSONDecodeError:
+                    pass
+            
             chapters = llm_client.generate_book_summary(request.title, request.author)
+            
+            if book and chapters:
+                book.summary = json.dumps(chapters)
+                db.commit()
+            
             return {"chapters": chapters}
         except Exception:
             return {"chapters": []}

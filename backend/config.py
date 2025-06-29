@@ -45,7 +45,6 @@ class ConfigManager:
             return f.read().strip()
     
     def get_vertex_ai_config(self) -> dict:
-        """Get Vertex AI configuration for Google GenAI client"""
         return {
             "vertexai": True,
             "project": self.project_id,

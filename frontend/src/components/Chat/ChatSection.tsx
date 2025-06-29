@@ -275,7 +275,7 @@ export default function ChatSection({
     const textarea = e.target;
     textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
-    const maxHeight = 120; // Maximum height in pixels (about 6 lines)
+    const maxHeight = 120;
 
     if (scrollHeight <= maxHeight) {
       textarea.style.height = scrollHeight + "px";

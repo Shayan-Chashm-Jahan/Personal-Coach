@@ -155,7 +155,6 @@ function AppRoutes() {
         setInitialCallCompleted(data.initial_call_completed)
       }
     } catch (error) {
-      console.error('Failed to fetch user status:', error)
     }
   }
 

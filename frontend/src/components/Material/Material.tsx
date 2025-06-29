@@ -313,7 +313,6 @@ export default function Material() {
         setBookSummary(data.chapters || [])
       }
     } catch (error) {
-      console.error('Error fetching book summary:', error)
     } finally {
       setSummaryLoading(false)
     }
@@ -342,7 +341,6 @@ export default function Material() {
         ])
       }
     } catch (error) {
-      console.error('Error fetching materials:', error)
     } finally {
       setLoading(false)
     }

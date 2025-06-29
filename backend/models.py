@@ -102,6 +102,7 @@ class Book(Base):
     title = Column(String(500), nullable=False)
     author = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     

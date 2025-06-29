@@ -508,13 +508,24 @@ class LLMStreamingClient:
                 model=config_manager.model_fast,
                 contents=prompt,
                 config={
-                    "temperature": 0.3,
-                    "maxOutputTokens": 4000
+                    "temperature": 0.3
                 }
             )
             
+            
             if response and response.text:
                 text = response.text.strip()
+                
+                if text.startswith('```python'):
+                    text = text[9:]
+                elif text.startswith('```'):
+                    text = text[3:]
+                    
+                if text.endswith('```'):
+                    text = text[:-3]
+                
+                text = text.strip()
+                
                 first_bracket = text.find('[')
                 last_bracket = text.rfind(']')
                 
@@ -526,7 +537,7 @@ class LLMStreamingClient:
             
             return []
             
-        except Exception as e:
+        except Exception:
             return []
 
 
