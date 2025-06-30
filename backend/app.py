@@ -210,7 +210,7 @@ class ChatAPI:
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
 
             if full_response.strip():
-                memories = llm_client._extract_memories(message, full_response)
+                memories = llm_client._extract_memories(message, full_response, history_dict, user.id, db)
                 if memories:
                     llm_client.save_memories_to_db(memories, user.id, db)
 

@@ -133,12 +133,40 @@ class LLMStreamingClient:
         except Exception as e:
             return []
 
-    def _extract_memories(self, user_message: str, assistant_response: str) -> List[str]:
+    def _extract_memories(self, user_message: str, assistant_response: str, history: Optional[List[Dict[str, str]]] = None, user_id: Optional[int] = None, db: Optional[Session] = None) -> List[str]:
 
+        conversation_context = ""
+        if history:
+            processed_history, summary = self._build_conversation_context(history)
+            if summary:
+                conversation_context = f"Previous conversation summary: {summary}\n\n"
+            
+            recent_messages = processed_history[-10:] if processed_history else []
+            if recent_messages:
+                conversation_context += "Recent conversation:\n"
+                for msg in recent_messages:
+                    role = "User" if msg.get("role") == "user" else "Assistant"
+                    conversation_context += f"{role}: {msg.get('content', '')}\n"
+        
+        existing_memories_text = ""
+        if user_id and db:
+            existing_memories_context = self._build_memories_context(user_id, db)
+            if existing_memories_context:
+                existing_memories_text = existing_memories_context
+        
         memory_prompt = config_manager.memory_extraction_prompt.format(
             user_message=user_message,
-            assistant_response=assistant_response
+            assistant_response=assistant_response,
+            conversation_context=conversation_context,
+            existing_memories=existing_memories_text
         )
+        
+        print("\n=== MEMORY EXTRACTION DEBUG ===")
+        print(f"User Message: {user_message}")
+        print(f"Assistant Response: {assistant_response[:200]}..." if len(assistant_response) > 200 else f"Assistant Response: {assistant_response}")
+        print(f"Conversation Context: {conversation_context[:500]}..." if len(conversation_context) > 500 else f"Conversation Context: {conversation_context}")
+        print(f"Existing Memories: {existing_memories_text[:500]}..." if len(existing_memories_text) > 500 else f"Existing Memories: {existing_memories_text}")
+        print("==============================\n")
 
         try:
             client = self._get_client()
@@ -152,6 +180,9 @@ class LLMStreamingClient:
             )
 
             content = response.text.strip() if response and response.text else ""
+            
+            print(f"Raw LLM Response: {content}")
+            print("==============================\n")
 
             if content.upper() == "NONE" or not content:
                 return []
@@ -244,6 +275,20 @@ class LLMStreamingClient:
 
         return "\n\n".join(system_parts)
 
+    def _build_conversation_context(self, history: Optional[List[Dict[str, str]]]) -> tuple[List[Dict[str, str]], Optional[str]]:
+        if not history:
+            return [], None
+            
+        existing_summary = self._load_conversation_summary()
+        
+        if len(history) > config_manager.history_truncate_threshold:
+            full_history = history.copy()
+            summary = self._create_summary(full_history[:-30])
+            self._save_conversation_summary(summary)
+            return history[-config_manager.history_truncate_threshold:], summary
+        
+        return history, existing_summary
+    
     def _build_contents(
         self,
         text: str,
@@ -252,15 +297,11 @@ class LLMStreamingClient:
         db: Optional[Session] = None
     ) -> List[Dict[str, str]]:
         contents = []
-
-        if history and len(history) > config_manager.history_truncate_threshold:
-            full_history = history.copy()
-            summary = self._create_summary(full_history[:-30])
-            self._save_conversation_summary(summary)
-            history = history[-config_manager.history_truncate_threshold:]
-
-        if history:
-            for item in history:
+        
+        processed_history, _ = self._build_conversation_context(history)
+        
+        if processed_history:
+            for item in processed_history:
                 normalized_role = self._normalize_role(item["role"])
                 contents.append({
                     "role": normalized_role,
