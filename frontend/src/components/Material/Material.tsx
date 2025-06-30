@@ -42,6 +42,7 @@ export default function Material() {
   })
   const [bookSummary, setBookSummary] = useState<{ chapter: string; content: string }[]>([])
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0)
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -420,6 +421,7 @@ export default function Material() {
                         className="material-link discuss-book-button"
                         onClick={() => {
                           setDiscussModal({ isOpen: true, book })
+                          setCurrentChapterIndex(0)
                           fetchBookSummary(book)
                         }}
                       >
@@ -480,6 +482,7 @@ export default function Material() {
               onClick={() => {
                 setDiscussModal({ isOpen: false, book: null })
                 setBookSummary([])
+                setCurrentChapterIndex(0)
               }}
             >
               ×
@@ -501,16 +504,37 @@ export default function Material() {
                   </div>
                   <p className="loading-text">Generating chapter summaries...</p>
                 </div>
-              ) : (
-                <div className="chapters-container">
-                  {bookSummary.map((chapter, index) => (
-                    <div key={index} className="chapter-section">
-                      <h3 className="chapter-title">{chapter.chapter}</h3>
-                      <div className="chapter-content">
-                        <ReactMarkdown>{chapter.content}</ReactMarkdown>
-                      </div>
+              ) : bookSummary.length > 0 ? (
+                <div className="chapter-viewer">
+                  <div className="chapter-section">
+                    <h3 className="chapter-title">{bookSummary[currentChapterIndex].chapter}</h3>
+                    <div className="chapter-content">
+                      <ReactMarkdown>{bookSummary[currentChapterIndex].content}</ReactMarkdown>
                     </div>
-                  ))}
+                  </div>
+                  <div className="chapter-navigation">
+                    <button 
+                      className="chapter-nav-button"
+                      onClick={() => setCurrentChapterIndex(prev => Math.max(0, prev - 1))}
+                      disabled={currentChapterIndex === 0}
+                    >
+                      Previous
+                    </button>
+                    <span className="chapter-indicator">
+                      Chapter {currentChapterIndex + 1} of {bookSummary.length}
+                    </span>
+                    <button 
+                      className="chapter-nav-button"
+                      onClick={() => setCurrentChapterIndex(prev => Math.min(bookSummary.length - 1, prev + 1))}
+                      disabled={currentChapterIndex === bookSummary.length - 1}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="no-summary">
+                  <p>No chapter summaries available</p>
                 </div>
               )}
             </div>

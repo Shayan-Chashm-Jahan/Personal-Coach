@@ -1524,8 +1524,10 @@ html, body {
 
 .discuss-modal-content {
   padding: 60px 40px 40px 40px;
-  overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .book-summary-header {
@@ -1596,6 +1598,65 @@ html, body {
 
 .chapter-content li {
   margin-bottom: 8px;
+}
+
+.chapter-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chapter-viewer .chapter-section {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.chapter-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  border-top: 1px solid #e2e8f0;
+  margin-top: auto;
+}
+
+.chapter-nav-button {
+  padding: 10px 24px;
+  background: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chapter-nav-button:hover:not(:disabled) {
+  background: #2d3748;
+  transform: translateY(-1px);
+}
+
+.chapter-nav-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.chapter-indicator {
+  font-size: 16px;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.no-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #718096;
+  font-size: 18px;
 }
 
 .video-thumbnail {

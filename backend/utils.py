@@ -99,8 +99,7 @@ class LLMStreamingClient:
             model=config_manager.model_pro,
             contents=summary_prompt,
             config={
-                "temperature": 0.3,
-                "maxOutputTokens": 500
+                "temperature": 0.3
             }
         )
         
@@ -123,19 +122,28 @@ class LLMStreamingClient:
         last_bracket = content.rfind(']')
         
         if first_bracket == -1 or last_bracket == -1:
+            print(f"No brackets found in response: {content}")
             return []
         
         list_string = content[first_bracket:last_bracket + 1]
+        print(f"Extracted list string: {list_string}")
         
         try:
             parsed_list = ast.literal_eval(list_string)
             if isinstance(parsed_list, list):
-                return [str(item).strip() for item in parsed_list if str(item).strip()]
+                result = [str(item).strip() for item in parsed_list if str(item).strip()]
+                print(f"Successfully parsed list: {result}")
+                return result
             return []
-        except:
+        except Exception as e:
+            print(f"Failed to parse list: {e}")
             return []
     
     def _extract_memories(self, user_message: str, assistant_response: str) -> List[str]:
+        print(f"\n=== MEMORY EXTRACTION ===")
+        print(f"User message: {user_message[:100]}...")
+        print(f"Assistant response: {assistant_response[:100]}...")
+        
         memory_prompt = config_manager.memory_extraction_prompt.format(
             user_message=user_message,
             assistant_response=assistant_response
@@ -143,39 +151,58 @@ class LLMStreamingClient:
 
         try:
             client = self._get_client()
+            print(f"Using model: {config_manager.model_pro}")
+            
             response = client.models.generate_content(
                 model=config_manager.model_pro,
                 contents=memory_prompt,
                 config={
-                    "temperature": 0.2,
-                    "maxOutputTokens": 200
+                    "temperature": 0.2
                 }
             )
             
-            content = response.text.strip()
+            content = response.text.strip() if response and response.text else ""
+            print(f"Memory extraction response: {content}")
             
             if content.upper() == "NONE" or not content:
+                print("No memories to extract (NONE or empty)")
                 return []
             
-            return self._extract_list_from_response(content)
+            memories = self._extract_list_from_response(content)
+            print(f"Extracted memories: {memories}")
+            return memories
             
-        except Exception:
+        except Exception as e:
+            print(f"ERROR in _extract_memories: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def save_memories_to_db(self, memory_list: List[str], user_id: int, db: Session) -> None:
         if not memory_list:
             return
         
+        print(f"\n=== SAVING MEMORIES TO DB ===")
+        print(f"User ID: {user_id}")
+        print(f"Number of memories to save: {len(memory_list)}")
+        
         from models import Memory
         
-        for memory_content in memory_list:
-            new_memory = Memory(
-                content=memory_content,
-                user_id=user_id
-            )
-            db.add(new_memory)
-        
-        db.commit()
+        try:
+            for memory_content in memory_list:
+                print(f"Saving memory: {memory_content}")
+                new_memory = Memory(
+                    content=memory_content,
+                    user_id=user_id
+                )
+                db.add(new_memory)
+            
+            db.commit()
+            print("Memories saved successfully")
+        except Exception as e:
+            print(f"ERROR saving memories: {type(e).__name__}: {str(e)}")
+            db.rollback()
+            raise
     
     def _build_goals_context(self, user_id: int, db: Session) -> Optional[str]:
         try:
@@ -290,8 +317,7 @@ class LLMStreamingClient:
                     "systemInstruction": {
                         "parts": [{"text": system_instruction}]
                     },
-                    "temperature": config_manager.temperature,
-                    "maxOutputTokens": config_manager.max_tokens
+                    "temperature": config_manager.temperature
                 }
             )
             
@@ -482,8 +508,7 @@ class LLMStreamingClient:
                 contents=prompt,
                 config={
                     "tools": [{"googleSearch": {}}],
-                    "temperature": 0.3,
-                    "maxOutputTokens": 2000
+                    "temperature": 0.3
                 }
             )
             
