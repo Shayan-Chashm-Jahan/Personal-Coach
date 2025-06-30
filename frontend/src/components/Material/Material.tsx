@@ -44,6 +44,10 @@ export default function Material() {
   const [bookSummary, setBookSummary] = useState<{ chapter: string; content: string }[]>([])
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0)
+  const [chatMessages, setChatMessages] = useState<Array<{ text: string; sender: 'user' | 'assistant' }>>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(true)
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -490,19 +494,75 @@ export default function Material() {
                 setDiscussModal({ isOpen: false, book: null })
                 setBookSummary([])
                 setCurrentChapterIndex(0)
+                setChatMessages([])
+                setChatInput('')
               }}
             >
               ×
             </button>
             <div className="discuss-modal-content">
-              {discussModal.book && (
-                <div className="book-summary-header">
-                  <h2>{discussModal.book.googleTitle || discussModal.book.title}</h2>
-                  <p className="book-summary-author">by {discussModal.book.author}</p>
+              {isChatOpen && (
+                <div className="discuss-modal-left">
+                  <button 
+                    className="chat-toggle-button chat-toggle-inside"
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    title="Hide chat"
+                  >
+                    ◀
+                  </button>
+                <div className="chat-container">
+                  <div className="chat-messages">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`chat-message ${msg.sender}`}>
+                        <div className="chat-message-content">
+                          {msg.sender === 'assistant' ? (
+                            <ReactMarkdown>{msg.text}</ReactMarkdown>
+                          ) : (
+                            msg.text
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="chat-input-container">
+                    <input
+                      type="text"
+                      className="chat-input"
+                      placeholder="Ask about this book..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !chatLoading) {
+                          // TODO: Implement chat functionality
+                        }
+                      }}
+                      disabled={chatLoading}
+                    />
+                    <button className="chat-send-button" disabled={chatLoading || !chatInput.trim()}>
+                      Send
+                    </button>
+                  </div>
+                </div>
                 </div>
               )}
+              <div className={`discuss-modal-right ${!isChatOpen ? 'full-width' : ''}`}>
+                {!isChatOpen && (
+                  <button 
+                    className="chat-toggle-button"
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    title="Show chat"
+                  >
+                    ▶
+                  </button>
+                )}
+                {discussModal.book && (
+                  <div className="book-summary-header">
+                    <h2>{discussModal.book.googleTitle || discussModal.book.title}</h2>
+                    <p className="book-summary-author">by {discussModal.book.author}</p>
+                  </div>
+                )}
 
-              {summaryLoading ? (
+                {summaryLoading ? (
                 <div className="summary-loading">
                   <div className="loading-dots">
                     <span className="loading-dot"></span>
@@ -543,7 +603,8 @@ export default function Material() {
                 <div className="no-summary">
                   <p>No chapter summaries available</p>
                 </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
