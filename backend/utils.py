@@ -360,11 +360,7 @@ class LLMStreamingClient:
                                 "enum": [
                                     "first_name",
                                     "last_name", 
-                                    "birth_date",
-                                    "personal_characteristics",
-                                    "life_ambitions",
-                                    "career_ambitions",
-                                    "six_month_objectives"
+                                    "birth_date"
                                 ]
                             },
                             "user_profile_value": {
@@ -392,6 +388,7 @@ class LLMStreamingClient:
                 
                 function_calls_found = False
                 function_response_parts = []
+                text_parts = []
                 
                 for part in response.candidates[0].content.parts:
                     if hasattr(part, 'function_call') and part.function_call:
@@ -405,8 +402,13 @@ class LLMStreamingClient:
                                 response={"success": True}
                             )
                             function_response_parts.append(function_response_part)
+                    elif hasattr(part, 'text') and part.text:
+                        text_parts.append(part.text)
                 
                 if function_calls_found:
+                    if text_parts:
+                        return " ".join(text_parts)
+                    
                     if self._is_profile_complete(user_id, db):
                         return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
                     
@@ -423,8 +425,19 @@ class LLMStreamingClient:
                     )
                     
                     return final_response.text if final_response.text else ""
+                elif text_parts:
+                    return " ".join(text_parts)
             
-            return response.text if response.text else ""
+            try:
+                return response.text if response.text else ""
+            except Exception:
+                if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                    text_parts = []
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            text_parts.append(part.text)
+                    return " ".join(text_parts) if text_parts else ""
+                return ""
             
         except Exception:
             raise
@@ -443,8 +456,7 @@ class LLMStreamingClient:
         value = args['user_profile_value']
         
         allowed_keys = [
-            'first_name', 'last_name', 'birth_date', 'personal_characteristics',
-            'life_ambitions', 'career_ambitions', 'six_month_objectives'
+            'first_name', 'last_name', 'birth_date'
         ]
         if key not in allowed_keys:
             return
@@ -483,11 +495,7 @@ class LLMStreamingClient:
         required_fields = [
             profile.first_name,
             profile.last_name, 
-            profile.birth_date,
-            profile.personal_characteristics,
-            profile.life_ambitions,
-            profile.career_ambitions,
-            profile.six_month_objectives
+            profile.birth_date
         ]
         
         return all(field is not None and str(field).strip() != '' for field in required_fields)
