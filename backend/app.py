@@ -60,13 +60,13 @@ security = HTTPBearer()
 class ChatAPI:
     def __init__(self) -> None:
         self.app = FastAPI(
-            title="Personal Coach API", 
+            title="Personal Coach API",
             version="1.0.0"
         )
         self._configure_cors()
         self._register_routes()
         create_tables()
-    
+
     def _configure_cors(self) -> None:
         self.app.add_middleware(
             CORSMiddleware,
@@ -75,108 +75,108 @@ class ChatAPI:
             allow_methods=["GET", "POST", "PUT", "DELETE"],
             allow_headers=["*"]
         )
-    
+
     def _register_routes(self) -> None:
         @self.app.post("/api/auth/register")
         async def register_route(user_data: UserRegister, db: Session = Depends(get_db)):
             return await self.register(user_data, db)
-            
+
         @self.app.post("/api/auth/login")
         async def login_route(user_data: UserLogin, db: Session = Depends(get_db)):
             return await self.login(user_data, db)
-            
+
         @self.app.post("/api/chat/stream")
         async def stream_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.stream_chat(request, current_user, db)
-            
+
         @self.app.get("/api/memories")
         async def get_memories_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_memories(current_user, db)
-            
+
         @self.app.delete("/api/memories/{memory_id}")
         async def delete_memory_route(memory_id: str, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.delete_memory(memory_id, current_user, db)
-            
+
         @self.app.get("/api/messages")
         async def get_messages_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_messages(current_user, db)
-            
+
         @self.app.post("/api/messages")
         async def save_message_route(message_data: MessageCreate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.save_message(message_data, current_user, db)
-            
+
         @self.app.delete("/api/messages")
         async def clear_messages_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.clear_messages(current_user, db)
-            
+
         @self.app.get("/api/goals")
         async def get_goals_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_goals(current_user, db)
-            
+
         @self.app.post("/api/goals")
         async def create_goal_route(goal_data: GoalCreate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.create_goal(goal_data, current_user, db)
-            
+
         @self.app.delete("/api/goals/{goal_id}")
         async def delete_goal_route(goal_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.delete_goal(goal_id, current_user, db)
-            
+
         @self.app.put("/api/goals/{goal_id}/status")
         async def update_goal_status_route(goal_id: int, status: str = "Active", current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.update_goal_status(goal_id, status, current_user, db)
-            
+
         @self.app.get("/api/user/status")
         async def get_user_status_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_user_status(current_user, db)
-            
+
         @self.app.get("/api/chats")
         async def get_chats_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_chats(current_user, db)
-            
+
         @self.app.post("/api/chats")
         async def create_chat_route(chat_data: ChatCreate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.create_chat(chat_data, current_user, db)
-            
+
         @self.app.put("/api/chats/{chat_id}")
         async def update_chat_route(chat_id: int, chat_data: ChatCreate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.update_chat(chat_id, chat_data, current_user, db)
-            
+
         @self.app.delete("/api/chats/{chat_id}")
         async def delete_chat_route(chat_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.delete_chat(chat_id, current_user, db)
-            
+
         @self.app.get("/api/chats/{chat_id}/messages")
         async def get_chat_messages_route(chat_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_chat_messages(chat_id, current_user, db)
-            
+
         @self.app.post("/api/chats/generate-title")
         async def generate_title_route(request: TitleGenerateRequest, current_user: User = Depends(self.get_current_user)):
             return await self.generate_title(request)
-            
+
         @self.app.post("/api/initial-call/chat")
         async def initial_call_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.initial_call_chat(request, current_user, db)
-            
+
         @self.app.post("/api/initial-call/initialize")
         async def initialize_user_profile_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.initialize_user_profile(current_user, db)
-            
+
         @self.app.get("/api/books")
         async def get_books_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_books(current_user, db)
-            
+
         @self.app.get("/api/videos")
         async def get_videos_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_videos(current_user, db)
-            
+
         @self.app.post("/api/books/summary")
         async def generate_book_summary_route(request: BookSummaryRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.generate_book_summary(request, current_user, db)
-    
+
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
-    
+
     def get_current_user(
         self,
         credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -185,44 +185,44 @@ class ChatAPI:
         email = verify_token(credentials.credentials)
         if not email:
             raise HTTPException(status_code=401, detail="Invalid authentication token")
-        
+
         user = db.query(User).filter(User.email == email).first()
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-        
+
         return user
-    
+
     def _convert_history_to_dict(self, history: List[HistoryItem]) -> List[dict]:
         return [{"role": item.role, "content": item.content} for item in history]
-    
+
     def _generate_stream(
-        self, 
-        message: str, 
-        history_dict: List[dict], 
-        user: User, 
+        self,
+        message: str,
+        history_dict: List[dict],
+        user: User,
         db: Session
     ) -> Iterator[str]:
         try:
             full_response = ""
-            
+
             for chunk in stream_chat_response(message, history_dict, user.id, db):
                 full_response += chunk
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-            
+
             if full_response.strip():
                 memories = llm_client._extract_memories(message, full_response)
                 if memories:
                     llm_client.save_memories_to_db(memories, user.id, db)
-            
+
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     def _generate_initial_call_response(
-        self, 
-        message: str, 
-        history_dict: List[dict], 
-        user: User, 
+        self,
+        message: str,
+        history_dict: List[dict],
+        user: User,
         db: Session,
         prompt: str
     ) -> Iterator[str]:
@@ -232,18 +232,18 @@ class ChatAPI:
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     def _generate_initial_call_response_with_save(
-        self, 
-        message: str, 
-        history_dict: List[dict], 
-        user_id: int, 
+        self,
+        message: str,
+        history_dict: List[dict],
+        user_id: int,
         db: Session,
         prompt: str
     ) -> Iterator[str]:
         try:
             response = generate_initial_call_response(message, history_dict, user_id, db, prompt)
-            
+
             from models import Message
             coach_message = Message(
                 content=response,
@@ -253,22 +253,22 @@ class ChatAPI:
             )
             db.add(coach_message)
             db.commit()
-            
+
             yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     async def stream_chat(
-        self, 
-        request: ChatRequest, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        request: ChatRequest,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ) -> StreamingResponse:
         try:
             self._validate_request(request)
             history_dict = self._convert_history_to_dict(request.history)
-            
+
             return StreamingResponse(
                 self._generate_stream(request.message, history_dict, current_user, db),
                 media_type="text/plain",
@@ -279,10 +279,10 @@ class ChatAPI:
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Stream chat error: {str(e)}")
-    
+
     async def get_memories(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -303,11 +303,11 @@ class ChatAPI:
             return {"memories": memories}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def delete_memory(
-        self, 
-        memory_id: str, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        memory_id: str,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -315,10 +315,10 @@ class ChatAPI:
                 Memory.id == int(memory_id),
                 Memory.user_id == current_user.id
             ).first()
-            
+
             if not memory:
                 raise HTTPException(status_code=404, detail="Memory not found")
-            
+
             db.delete(memory)
             db.commit()
             return {"message": "Memory deleted successfully"}
@@ -328,55 +328,55 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def register(
-        self, 
-        user_data: UserRegister, 
+        self,
+        user_data: UserRegister,
         db: Session = Depends(get_db)
     ):
         try:
             existing_user = db.query(User).filter(User.email == user_data.email).first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already registered")
-            
+
             hashed_password = get_password_hash(user_data.password)
             new_user = User(email=user_data.email, hashed_password=hashed_password)
             db.add(new_user)
             db.commit()
             db.refresh(new_user)
-            
+
             access_token = create_access_token(data={"sub": new_user.email})
             return {"access_token": access_token, "token_type": "bearer"}
-        
+
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def login(
-        self, 
-        user_data: UserLogin, 
+        self,
+        user_data: UserLogin,
         db: Session = Depends(get_db)
     ):
         try:
             user = db.query(User).filter(User.email == user_data.email).first()
             if not user or not verify_password(user_data.password, user.hashed_password):
                 raise HTTPException(
-                    status_code=401, 
+                    status_code=401,
                     detail="Invalid email or password"
                 )
-            
+
             access_token = create_access_token(data={"sub": user.email})
             return {"access_token": access_token, "token_type": "bearer"}
-        
+
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_messages(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -397,11 +397,11 @@ class ChatAPI:
             return {"messages": messages}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def save_message(
-        self, 
+        self,
         message_data: MessageCreate,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -409,28 +409,28 @@ class ChatAPI:
                 Chat.id == message_data.chat_id,
                 Chat.user_id == current_user.id
             ).first()
-            
+
             if not chat:
                 raise HTTPException(status_code=404, detail="Chat not found")
-            
+
             existing_message = db.query(Message).filter(
                 Message.content == message_data.content,
                 Message.sender == message_data.sender,
                 Message.chat_id == message_data.chat_id
             ).order_by(Message.created_at.desc()).first()
-            
+
             if existing_message:
                 time_diff = datetime.utcnow() - existing_message.created_at
                 if time_diff < timedelta(minutes=1):
                     return {"message": "Duplicate message not saved"}
-            
+
             new_message = Message(
                 content=message_data.content,
                 sender=message_data.sender,
                 user_id=current_user.id,
                 chat_id=message_data.chat_id
             )
-            
+
             chat.updated_at = datetime.utcnow()
             db.add(new_message)
             db.commit()
@@ -438,10 +438,10 @@ class ChatAPI:
             return {"message": "Message saved successfully"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def clear_messages(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -452,10 +452,10 @@ class ChatAPI:
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_goals(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -478,11 +478,11 @@ class ChatAPI:
             return {"goals": goals}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def create_goal(
-        self, 
+        self,
         goal_data: GoalCreate,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -494,7 +494,7 @@ class ChatAPI:
             db.add(new_goal)
             db.commit()
             db.refresh(new_goal)
-            
+
             return {
                 "id": str(new_goal.id),
                 "title": new_goal.title,
@@ -504,11 +504,11 @@ class ChatAPI:
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def delete_goal(
-        self, 
+        self,
         goal_id: int,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -516,10 +516,10 @@ class ChatAPI:
                 Goal.id == goal_id,
                 Goal.user_id == current_user.id
             ).first()
-            
+
             if not goal:
                 raise HTTPException(status_code=404, detail="Goal not found")
-            
+
             db.delete(goal)
             db.commit()
             return {"message": "Goal deleted successfully"}
@@ -527,12 +527,12 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def update_goal_status(
-        self, 
+        self,
         goal_id: int,
         status: str,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -540,14 +540,14 @@ class ChatAPI:
                 Goal.id == goal_id,
                 Goal.user_id == current_user.id
             ).first()
-            
+
             if not goal:
                 raise HTTPException(status_code=404, detail="Goal not found")
-            
+
             goal.status = status
             db.commit()
             db.refresh(goal)
-            
+
             return {
                 "id": str(goal.id),
                 "title": goal.title,
@@ -559,10 +559,10 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_user_status(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -571,10 +571,10 @@ class ChatAPI:
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_chats(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -596,11 +596,11 @@ class ChatAPI:
             return {"chats": chats}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def create_chat(
-        self, 
+        self,
         chat_data: ChatCreate,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -611,7 +611,7 @@ class ChatAPI:
             db.add(new_chat)
             db.commit()
             db.refresh(new_chat)
-            
+
             return {
                 "id": str(new_chat.id),
                 "title": new_chat.title,
@@ -620,12 +620,12 @@ class ChatAPI:
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def update_chat(
-        self, 
+        self,
         chat_id: int,
         chat_data: ChatCreate,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -633,14 +633,14 @@ class ChatAPI:
                 Chat.id == chat_id,
                 Chat.user_id == current_user.id
             ).first()
-            
+
             if not chat:
                 raise HTTPException(status_code=404, detail="Chat not found")
-            
+
             chat.title = chat_data.title
             db.commit()
             db.refresh(chat)
-            
+
             return {
                 "id": str(chat.id),
                 "title": chat.title,
@@ -651,11 +651,11 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def delete_chat(
-        self, 
+        self,
         chat_id: int,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -663,10 +663,10 @@ class ChatAPI:
                 Chat.id == chat_id,
                 Chat.user_id == current_user.id
             ).first()
-            
+
             if not chat:
                 raise HTTPException(status_code=404, detail="Chat not found")
-            
+
             db.delete(chat)
             db.commit()
             return {"message": "Chat deleted successfully"}
@@ -674,11 +674,11 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_chat_messages(
-        self, 
+        self,
         chat_id: int,
-        current_user: User = Depends(get_current_user), 
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -686,10 +686,10 @@ class ChatAPI:
                 Chat.id == chat_id,
                 Chat.user_id == current_user.id
             ).first()
-            
+
             if not chat:
                 raise HTTPException(status_code=404, detail="Chat not found")
-            
+
             chat_messages = (
                 db.query(Message)
                 .filter(Message.chat_id == chat_id)
@@ -709,17 +709,17 @@ class ChatAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def initial_call_chat(
-        self, 
-        request: ChatRequest, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        request: ChatRequest,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
             self._validate_request(request)
             history_dict = self._convert_history_to_dict(request.history)
-            
+
             from models import Message
             user_message = Message(
                 content=request.message,
@@ -729,15 +729,15 @@ class ChatAPI:
             )
             db.add(user_message)
             db.commit()
-            
+
             chat_history = ""
             if history_dict:
                 for entry in history_dict:
                     role = "User" if entry["role"] == "user" else "Coach"
                     chat_history += f"{role}: {entry['content']}\n"
-            
+
             prompt = config_manager.initial_call_prompt.format(chat_history=chat_history)
-            
+
             return StreamingResponse(
                 self._generate_initial_call_response_with_save(request.message, history_dict, current_user.id, db, prompt),
                 media_type="text/plain",
@@ -748,14 +748,14 @@ class ChatAPI:
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Initial call chat error: {str(e)}")
-    
+
     def _fetch_book_from_google(self, title: str, author: str) -> Optional[dict]:
         import requests
-        
+
         try:
             query = f"{title} {author}".strip()
             url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1"
-            
+
             response = requests.get(url, timeout=5)
             if response.status_code == 200:
                 data = response.json()
@@ -771,41 +771,41 @@ class ChatAPI:
             return None
 
     async def initialize_user_profile(
-        self, 
+        self,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
             from models import Message, Book, Video
             import requests
-            
+
             user = db.query(User).filter(User.id == current_user.id).first()
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
-            
+
             messages = db.query(Message).filter(Message.user_id == current_user.id, Message.chat_id == 0).order_by(Message.created_at).all()
-            
+
             conversation_text = ""
             for msg in messages:
                 role = "User" if msg.sender == "user" else "Coach"
                 conversation_text += f"{role}: {msg.content}\n"
-            
+
             if conversation_text.strip():
                 recommendations = llm_client.find_recommendations(conversation_text)
-                
+
                 seen_books = set()
-                
+
                 for book_data in recommendations.get("books", []):
                     title = book_data.get("title", "")
                     author = book_data.get("author", "")
-                    
+
                     if not title:
                         continue
-                    
+
                     book_key = f"{title.lower()}-{author.lower()}"
                     if book_key in seen_books:
                         continue
-                    
+
                     google_data = self._fetch_book_from_google(title, author)
                     if google_data:
                         book = Book(
@@ -816,7 +816,7 @@ class ChatAPI:
                         )
                         db.add(book)
                         seen_books.add(book_key)
-                
+
                 for video_data in recommendations.get("videos", []):
                     video = Video(
                         title=video_data.get("title", ""),
@@ -825,23 +825,23 @@ class ChatAPI:
                         user_id=current_user.id
                     )
                     db.add(video)
-            
+
             user.initial_call_completed = True
             db.commit()
-            
+
             return {"success": True, "message": "Profile initialization completed"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Profile initialization error: {str(e)}")
-    
+
     async def generate_title(self, request: TitleGenerateRequest):
         try:
             from pathlib import Path
             prompt_path = Path(__file__).parent / "prompts" / "title_generation.md"
             with open(prompt_path, "r") as f:
                 prompt_template = f.read()
-            
+
             prompt = prompt_template.format(user_message=request.message)
-            
+
             client = llm_client._get_client()
             response = client.models.generate_content(
                 model=config_manager.model_super_fast,
@@ -850,42 +850,42 @@ class ChatAPI:
                     "temperature": 0.7
                 }
             )
-            
+
             if not response:
                 raise ValueError("No response from API")
-            
+
             title = ""
             if response.candidates and len(response.candidates) > 0:
                 candidate = response.candidates[0]
                 if candidate.content and candidate.content.parts:
                     title = candidate.content.parts[0].text.strip()
-            
+
             if not title and hasattr(response, 'text'):
                 title = response.text.strip() if response.text else ""
-            
+
             if title.startswith('"') and title.endswith('"'):
                 title = title[1:-1]
             if title.startswith("'") and title.endswith("'"):
                 title = title[1:-1]
-            
+
             if not title or len(title) > 50:
                 words = request.message.split()[:5]
                 title = " ".join(words)
                 if len(title) > 30:
                     title = title[:27] + "..."
-            
+
             return {"title": title}
-            
+
         except Exception:
             words = request.message.split()[:5]
             title = " ".join(words)
             if len(title) > 30:
                 title = title[:27] + "..."
             return {"title": title}
-    
+
     async def get_books(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -909,10 +909,10 @@ class ChatAPI:
             return {"books": books}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def get_videos(
-        self, 
-        current_user: User = Depends(get_current_user), 
+        self,
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         try:
@@ -936,54 +936,33 @@ class ChatAPI:
             return {"videos": videos}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     async def generate_book_summary(self, request: BookSummaryRequest, current_user: User, db: Session):
         try:
             from models import Book
             import json
-            
-            print(f"\n=== BOOK SUMMARY REQUEST ===")
-            print(f"Title: {request.title}")
-            print(f"Author: {request.author}")
-            print(f"User ID: {current_user.id}")
-            
+
+
             book = db.query(Book).filter(
                 Book.user_id == current_user.id,
                 Book.title == request.title
             ).first()
-            
-            if book:
-                print(f"Book found in DB: ID={book.id}, Has summary: {bool(book.summary)}")
-            else:
-                print("Book NOT found in database")
-            
+
             if book and book.summary:
                 try:
                     chapters = json.loads(book.summary)
-                    print(f"Returning cached summary with {len(chapters)} chapters")
                     return {"chapters": chapters}
                 except json.JSONDecodeError as e:
-                    print(f"ERROR: Failed to parse cached summary: {e}")
                     pass
-            
-            print("Generating new summary via AI...")
+
             chapters = llm_client.generate_book_summary(request.title, request.author)
-            
+
             if book and chapters:
-                print(f"Saving {len(chapters)} chapters to database")
                 book.summary = json.dumps(chapters)
                 db.commit()
-                print("Summary saved successfully")
-            elif not book:
-                print("WARNING: Cannot save summary - book not found in database")
-            elif not chapters:
-                print("WARNING: Cannot save summary - no chapters generated")
-            
+
             return {"chapters": chapters}
         except Exception as e:
-            print(f"\nERROR in generate_book_summary endpoint: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return {"chapters": []}
 
 

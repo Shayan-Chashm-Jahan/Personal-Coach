@@ -10,13 +10,13 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     initial_call_completed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     memories = relationship("Memory", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
@@ -28,7 +28,7 @@ class User(Base):
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
@@ -36,64 +36,64 @@ class UserProfile(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
-    
+
     user = relationship("User", back_populates="profile")
 
 
 class Memory(Base):
     __tablename__ = "memories"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="memories")
 
 
 class Chat(Base):
     __tablename__ = "chats"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="chats")
     messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
 
 
 class Message(Base):
     __tablename__ = "messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
     sender = Column(String(10), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     chat_id = Column(Integer, ForeignKey("chats.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="messages")
     chat = relationship("Chat", back_populates="messages")
 
 
 class Goal(Base):
     __tablename__ = "goals"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=False)
     status = Column(String(20), default="Active", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="goals")
 
 
 class Book(Base):
     __tablename__ = "books"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False)
     author = Column(String(255), nullable=True)
@@ -101,20 +101,20 @@ class Book(Base):
     summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="books")
 
 
 class Video(Base):
     __tablename__ = "videos"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False)
     url = Column(String(1000), nullable=False)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
+
     user = relationship("User", back_populates="videos")
 
 
