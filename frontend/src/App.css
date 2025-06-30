@@ -1566,7 +1566,6 @@ html, body {
 .chapter-section {
   margin-bottom: 40px;
   padding-bottom: 40px;
-  border-bottom: 1px solid #e5e5e5;
 }
 
 .chapter-section:last-child {
