@@ -102,11 +102,11 @@ function AppRoutes() {
 
   useEffect(() => {
     checkAuthStatus()
-    
+
     const handleClickOutside = () => {
       setContextMenu(null)
     }
-    
+
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
@@ -253,7 +253,7 @@ function AppRoutes() {
     if (!currentChatId) {
       return
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/messages`, {
         method: 'POST',
@@ -267,7 +267,7 @@ function AppRoutes() {
           chat_id: parseInt(currentChatId)
         })
       })
-      
+
       if (response.ok) {
         moveCurrentChatToTop()
       }
@@ -278,11 +278,11 @@ function AppRoutes() {
 
   const moveCurrentChatToTop = (): void => {
     if (!currentChatId) return
-    
+
     setChats(prev => {
       const currentChat = prev.find(chat => chat.id === currentChatId)
       if (!currentChat) return prev
-      
+
       const otherChats = prev.filter(chat => chat.id !== currentChatId)
       return [currentChat, ...otherChats]
     })
@@ -429,7 +429,7 @@ function AppRoutes() {
       })
 
       if (response.ok) {
-        setChats(prev => prev.map(chat => 
+        setChats(prev => prev.map(chat =>
           chat.id === chatId ? { ...chat, title } : chat
         ))
       } else {
@@ -450,7 +450,7 @@ function AppRoutes() {
         },
         body: JSON.stringify({ message })
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         return data.title
@@ -460,7 +460,7 @@ function AppRoutes() {
     } catch (error) {
       showNotification('Failed to generate title', 'error')
     }
-    
+
     const words = message.trim().split(' ').slice(0, 5)
     let title = words.join(' ')
     if (title.length > 30) {
@@ -488,7 +488,7 @@ function AppRoutes() {
       if (response.ok) {
         const remainingChats = chats.filter(chat => chat.id !== chatId)
         setChats(remainingChats)
-        
+
         if (currentChatId === chatId) {
           setCurrentChatId(null)
           setMessages([])
@@ -604,9 +604,9 @@ function AppRoutes() {
   const showNotification = (message: string, type: 'error' | 'success' | 'info') => {
     const id = Date.now().toString()
     const notification: Notification = { id, message, type }
-    
+
     setNotifications(prev => [...prev, notification])
-    
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id))
     }, 5000)
@@ -680,7 +680,7 @@ function AppRoutes() {
         )
       case SECTIONS.GOALS:
         return (
-          <GoalsSection 
+          <GoalsSection
             createGoal={createGoal}
             showAddForm={showGoalForm}
             setShowAddForm={setShowGoalForm}
@@ -758,9 +758,9 @@ function AppRoutes() {
           </form>
           <p className="auth-switch">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              type="button" 
-              className="link-button" 
+            <button
+              type="button"
+              className="link-button"
               onClick={() => setIsLogin(!isLogin)}
               disabled={isSubmitting}
             >
@@ -777,7 +777,7 @@ function AppRoutes() {
       <div className="section-header">
         <h1>{getSectionTitle()}</h1>
         {activeSection === SECTIONS.CHAT && messages.length > 0 && (
-          <Link 
+          <Link
             to="/chat"
             onClick={async (e) => {
               e.preventDefault()
@@ -797,7 +797,7 @@ function AppRoutes() {
           </Link>
         )}
         {activeSection === SECTIONS.GOALS && (
-          <button 
+          <button
             onClick={() => setShowGoalForm(true)}
             className="header-new-chat-button"
             title="Add New Goal"
@@ -832,8 +832,8 @@ function AppRoutes() {
   const renderNotifications = () => (
     <div className="notifications-container">
       {notifications.map((notification) => (
-        <div 
-          key={notification.id} 
+        <div
+          key={notification.id}
           className={`notification notification-${notification.type}`}
         >
           <div className="notification-content">

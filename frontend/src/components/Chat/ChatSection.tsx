@@ -223,7 +223,7 @@ export default function ChatSection({
     setInputValue("");
     setIsLoading(true);
     await addMessage(messageText, "user");
-    
+
     setMessages((prev) => [...prev, { text: "", sender: "coach" }]);
 
     if ((isNewChat || isFirstMessageInChat) && chatId) {

@@ -117,7 +117,7 @@ export default function InterviewPending({
                 ...newMessages[coachMessageIndex],
                 text: newText,
               };
-              
+
               if (newText.includes("It was wonderful getting to know you!") && newText.includes("Let me prepare everything for our journey ahead!")) {
                 setShowCompletionButton(true);
                 startInitialization();

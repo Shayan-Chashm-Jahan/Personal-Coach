@@ -12,13 +12,13 @@ interface ContextMenuProps {
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onOpenNewTab, onClose, onDelete, showOpenInNewTab = true }) => {
   return (
-    <div 
+    <div
       className="context-menu"
       style={{ left: x, top: y }}
       onClick={onClose}
     >
       {showOpenInNewTab && (
-        <div 
+        <div
           className="context-menu-item"
           onClick={(e) => {
             e.stopPropagation()
@@ -30,7 +30,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onOpenNewTab, onClose, 
         </div>
       )}
       {onDelete && (
-        <div 
+        <div
           className="context-menu-item context-menu-item-delete"
           onClick={(e) => {
             e.stopPropagation()

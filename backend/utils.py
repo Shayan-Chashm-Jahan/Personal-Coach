@@ -502,15 +502,11 @@ class LLMStreamingClient:
         api_key = config_manager.google_api_key
         
         if not api_key:
-            print("ERROR: GOOGLE_API_KEY environment variable not set")
             return youtube_videos
         
-        print(f"\n=== YOUTUBE SEARCH ===")
-        print(f"Searching for {len(search_queries)} videos...")
         
         for query in search_queries:
             try:
-                print(f"\nSearching YouTube for: {query}")
                 url = "https://www.googleapis.com/youtube/v3/search"
                 params = {
                     "part": "snippet",
@@ -521,7 +517,6 @@ class LLMStreamingClient:
                 }
                 
                 response = requests.get(url, params=params)
-                print(f"YouTube API Response Status: {response.status_code}")
                 
                 if response.status_code == 200:
                     data = response.json()
@@ -532,25 +527,22 @@ class LLMStreamingClient:
                         channel_name = video["snippet"]["channelTitle"]
                         video_url = f"https://www.youtube.com/watch?v={video_id}"
                         
-                        print(f"Found video: {video_title} by {channel_name}")
-                        print(f"URL: {video_url}")
+                        
+                        thumbnail_url = video["snippet"].get("thumbnails", {}).get("high", {}).get("url", "")
                         
                         youtube_videos.append({
                             "title": video_title,
                             "url": video_url,
-                            "channel": channel_name
+                            "channel": channel_name,
+                            "thumbnail": thumbnail_url
                         })
                     else:
-                        print(f"No videos found for query: {query}")
+                        pass
                 else:
-                    error_data = response.json()
-                    print(f"YouTube API Error: {response.status_code}")
-                    print(f"Error details: {error_data}")
-            except Exception as e:
-                print(f"Exception during YouTube search: {type(e).__name__}: {str(e)}")
+                    pass
+            except Exception:
                 continue
         
-        print(f"\nTotal videos found: {len(youtube_videos)}")
         return youtube_videos
 
     def find_recommendations(self, conversation_text: str) -> dict:
@@ -575,12 +567,9 @@ class LLMStreamingClient:
 
             result = self._extract_json_from_response(response.text)
             
-            print(f"\n=== RECOMMENDATIONS FOUND ===")
-            print(f"Books: {len(result.get('books', []))}")
-            print(f"Videos: {len(result.get('videos', []))}")
             
             if result.get("videos"):
-                print("\nPreparing YouTube searches...")
+                pass
                 search_queries = []
                 for video in result["videos"]:
                     if video.get("title"):
@@ -588,29 +577,26 @@ class LLMStreamingClient:
                         if video.get("channel"):
                             query += " " + video.get("channel")
                         search_queries.append(query)
-                        print(f"- {query}")
                 
                 youtube_results = self.search_youtube_videos(search_queries)
                 
-                print(f"\nUpdating video URLs...")
                 valid_videos = []
                 seen_urls = set()
                 
                 for i, video in enumerate(result["videos"]):
                     if i < len(youtube_results):
                         video["url"] = youtube_results[i]["url"]
-                        print(f"✓ Video {i+1}: URL added")
+                        video["thumbnail"] = youtube_results[i].get("thumbnail", "")
                         
                         if video["url"].lower() not in seen_urls:
                             valid_videos.append(video)
                             seen_urls.add(video["url"].lower())
                         else:
-                            print(f"✗ Video {i+1}: Duplicate URL, skipping")
+                            pass
                     else:
-                        print(f"✗ Video {i+1}: No YouTube URL found, skipping")
+                        pass
                 
                 result["videos"] = valid_videos
-                print(f"\nFinal video count: {len(valid_videos)}")
             
             return result
 
@@ -663,7 +649,7 @@ class LLMStreamingClient:
             else:
                 return []
 
-        except Exception as e:
+        except Exception:
             return []
 
 

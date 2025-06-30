@@ -51,13 +51,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <p>{message}</p>
         </div>
         <div className="confirm-dialog-footer">
-          <button 
+          <button
             className="confirm-dialog-btn confirm-dialog-btn-cancel"
             onClick={onCancel}
           >
             {cancelText}
           </button>
-          <button 
+          <button
             className={`confirm-dialog-btn ${isDestructive ? 'confirm-dialog-btn-destructive' : 'confirm-dialog-btn-confirm'}`}
             onClick={onConfirm}
           >

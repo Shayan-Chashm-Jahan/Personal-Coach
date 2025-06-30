@@ -34,7 +34,7 @@ export default function Sidebar({
   onContextMenu
 }: SidebarProps) {
   const navigate = useNavigate()
-  
+
   const getRouteForSection = (section: string): string => {
     switch (section) {
       case SECTIONS.CHAT:
@@ -51,7 +51,7 @@ export default function Sidebar({
   }
 
   const renderNavigationItem = (section: string, label: string) => (
-    <Link 
+    <Link
       key={section}
       to={getRouteForSection(section)}
       className={`nav-item ${activeSection === section ? 'active' : ''}`}
@@ -71,9 +71,9 @@ export default function Sidebar({
 
   const renderChatList = () => {
     if (activeSection !== SECTIONS.CHAT) return null
-    
+
     const nonEmptyChats = chats.filter(chat => chat.title !== 'New Chat')
-    
+
     if (nonEmptyChats.length === 0) return null
 
     return (
@@ -83,7 +83,7 @@ export default function Sidebar({
         </div>
         <div className="chat-items">
           {nonEmptyChats.map(chat => (
-            <Link 
+            <Link
               key={chat.id}
               to={`/chat/${chat.id}`}
               className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}

@@ -24,10 +24,10 @@ export default function NotesSection({
   deleteMemory,
   onContextMenu,
 }: NotesSectionProps) {
-  const [confirmDelete, setConfirmDelete] = useState<{ 
-    isOpen: boolean; 
-    memoryId?: string; 
-    memoryContent?: string 
+  const [confirmDelete, setConfirmDelete] = useState<{
+    isOpen: boolean;
+    memoryId?: string;
+    memoryContent?: string
   }>({ isOpen: false });
 
   const handleConfirmDelete = () => {
@@ -111,7 +111,7 @@ export default function NotesSection({
           </div>
         ))}
       </div>
-      
+
       {confirmDelete.isOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -122,13 +122,13 @@ export default function NotesSection({
               <p>This action cannot be undone.</p>
             </div>
             <div className="modal-actions">
-              <button 
+              <button
                 onClick={() => setConfirmDelete({ isOpen: false })}
                 className="modal-button secondary"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleConfirmDelete}
                 className="modal-button danger"
               >

@@ -832,18 +832,18 @@ class ChatAPI:
                     if video_key in seen_videos:
                         continue
                     
+                    thumbnail = video_data.get("thumbnail", "")
+                    
                     video = Video(
                         title=title,
                         url=url,
                         description=video_data.get("description", ""),
+                        thumbnail=thumbnail,
                         user_id=current_user.id
                     )
                     db.add(video)
                     seen_videos.add(video_key)
                 
-                print(f"\n=== SAVED TO DATABASE ===")
-                print(f"Books saved: {len(seen_books)}")
-                print(f"Videos saved: {len(seen_videos)}")
 
             user.initial_call_completed = True
             db.commit()
@@ -948,6 +948,7 @@ class ChatAPI:
                     "title": video.title,
                     "url": video.url,
                     "description": video.description,
+                    "thumbnail": video.thumbnail or "",
                     "createdAt": video.created_at.isoformat()
                 }
                 for video in user_videos

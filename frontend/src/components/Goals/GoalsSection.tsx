@@ -69,7 +69,7 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
   const renderAddGoalForm = () => (
     <div className="modal-overlay">
       <div className="goal-modal-content" style={{ padding: '20px', maxHeight: '300px', position: 'relative' }}>
-        <button 
+        <button
           onClick={() => setShowAddForm(false)}
           style={{
             position: 'absolute',
@@ -91,7 +91,7 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
         >
           ×
         </button>
-        
+
         <div style={{ marginTop: '10px' }}>
           <label className="goal-label" style={{ marginBottom: '8px', display: 'block' }}>What's your goal?</label>
           <textarea
@@ -105,15 +105,15 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
             style={{ width: '100%', marginBottom: '15px' }}
           />
         </div>
-        
+
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button 
+          <button
             onClick={() => setShowAddForm(false)}
             className="goal-cancel-button"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={addGoal}
             className="goal-add-button"
             disabled={!newGoal.description.trim()}
@@ -135,21 +135,21 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
       ) : (
         <div className="goals-list">
           {goals.map((goal) => (
-            <div 
-              key={goal.id} 
-              className="goal-item" 
-              style={{ 
-                padding: '15px', 
-                margin: '10px 0', 
-                border: '1px solid #e0e0e0', 
+            <div
+              key={goal.id}
+              className="goal-item"
+              style={{
+                padding: '15px',
+                margin: '10px 0',
+                border: '1px solid #e0e0e0',
                 borderRadius: '8px',
                 backgroundColor: '#f9f9f9',
                 cursor: 'pointer'
               }}
-              onContextMenu={(e) => onContextMenu(e, `/goals/${goal.id}`, () => setConfirmDelete({ 
-                isOpen: true, 
-                goalId: goal.id, 
-                goalDescription: goal.description 
+              onContextMenu={(e) => onContextMenu(e, `/goals/${goal.id}`, () => setConfirmDelete({
+                isOpen: true,
+                goalId: goal.id,
+                goalDescription: goal.description
               }))}
             >
               <p style={{ margin: '0', lineHeight: '1.4', color: '#333' }}>{goal.description}</p>
@@ -161,7 +161,7 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
         </div>
       )}
       {showAddForm && renderAddGoalForm()}
-      
+
       {confirmDelete.isOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -172,13 +172,13 @@ export default function GoalsSection({ createGoal, showAddForm, setShowAddForm, 
               <p>This action cannot be undone.</p>
             </div>
             <div className="modal-actions">
-              <button 
+              <button
                 onClick={() => setConfirmDelete({ isOpen: false })}
                 className="modal-button secondary"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => {
                   if (confirmDelete.goalId) {
                     deleteGoal(confirmDelete.goalId)

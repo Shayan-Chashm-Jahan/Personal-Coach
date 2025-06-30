@@ -112,6 +112,7 @@ class Video(Base):
     title = Column(String(500), nullable=False)
     url = Column(String(1000), nullable=False)
     description = Column(Text, nullable=True)
+    thumbnail = Column(String(1000), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 

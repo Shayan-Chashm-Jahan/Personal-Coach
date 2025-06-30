@@ -15,6 +15,7 @@ interface Video {
   title: string
   url: string
   description: string
+  thumbnail?: string
   createdAt: string
 }
 
@@ -46,7 +47,7 @@ export default function Material() {
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
-    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''
   }
 
   const extractYouTubeVideoId = (url: string): string | null => {
@@ -54,7 +55,7 @@ export default function Material() {
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
       /youtube\.com\/watch\?.*v=([^&\n?#]+)/
     ]
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern)
       if (match) return match[1]
@@ -80,7 +81,7 @@ export default function Material() {
 
   const validateVideos = async (videoList: Video[]) => {
     const deduplicatedVideos = deduplicateVideos(videoList)
-    
+
     const validationPromises = deduplicatedVideos.map(async (video) => {
       const youtubeTitle = await validateYouTubeVideo(video.url)
       return youtubeTitle ? { ...video, youtubeTitle } : null
@@ -107,16 +108,16 @@ export default function Material() {
     try {
       const query = `${title} ${author}`.replace(/[^\w\s]/g, '').trim()
       const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`)
-      
+
       if (response.ok) {
         const data = await response.json()
         const book = data.items?.[0]
         const imageLinks = book?.volumeInfo?.imageLinks
         const googleTitle = book?.volumeInfo?.title || null
         const coverUrl = imageLinks?.thumbnail || imageLinks?.smallThumbnail || null
-        
+
         const bookUrl = book?.volumeInfo?.infoLink || null
-        
+
         return { coverUrl, googleTitle, bookUrl }
       }
       return { coverUrl: null, googleTitle: null, bookUrl: null }
@@ -130,15 +131,15 @@ export default function Material() {
       r /= 255
       g /= 255
       b /= 255
-      
+
       const max = Math.max(r, g, b)
       const min = Math.min(r, g, b)
       let h = 0, s = 0, l = (max + min) / 2
-      
+
       if (max !== min) {
         const d = max - min
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-        
+
         switch (max) {
           case r: h = (g - b) / d + (g < b ? 6 : 0); break
           case g: h = (b - r) / d + 2; break
@@ -146,13 +147,13 @@ export default function Material() {
         }
         h /= 6
       }
-      
+
       return [h * 360, s, l]
     }
-    
+
     const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
       h /= 360
-      
+
       const hue2rgb = (p: number, q: number, t: number): number => {
         if (t < 0) t += 1
         if (t > 1) t -= 1
@@ -161,26 +162,26 @@ export default function Material() {
         if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
         return p
       }
-      
+
       if (s === 0) {
         return [l * 255, l * 255, l * 255]
       }
-      
+
       const q = l < 0.5 ? l * (1 + s) : l + s - l * s
       const p = 2 * l - q
-      
+
       return [
         Math.round(hue2rgb(p, q, h + 1/3) * 255),
         Math.round(hue2rgb(p, q, h) * 255),
         Math.round(hue2rgb(p, q, h - 1/3) * 255)
       ]
     }
-    
+
     const [h, s, l] = rgbToHsl(r, g, b)
-    
+
     const newS = Math.max(0.15, s * 0.3)
     const newL = Math.min(0.95, Math.max(0.85, l + 0.4))
-    
+
     const [newR, newG, newB] = hslToRgb(h, newS, newL)
     return `rgb(${newR}, ${newG}, ${newB})`
   }
@@ -189,7 +190,7 @@ export default function Material() {
     return new Promise((resolve) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
-      
+
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas')
@@ -212,7 +213,7 @@ export default function Material() {
             const g = data[i + 1]
             const b = data[i + 2]
             const alpha = data[i + 3]
-            
+
             if (alpha > 128) {
               const color = `${Math.floor(r / 32) * 32},${Math.floor(g / 32) * 32},${Math.floor(b / 32) * 32}`
               colorMap[color] = (colorMap[color] || 0) + 1
@@ -224,10 +225,10 @@ export default function Material() {
             return
           }
 
-          const dominantColor = Object.keys(colorMap).reduce((a, b) => 
+          const dominantColor = Object.keys(colorMap).reduce((a, b) =>
             colorMap[a] > colorMap[b] ? a : b
           )
-          
+
           const [r, g, b] = dominantColor.split(',').map(Number)
           const derivedColor = deriveBackgroundColor(r, g, b)
           resolve(derivedColor)
@@ -239,7 +240,7 @@ export default function Material() {
       img.onerror = () => {
         resolve('#f5f5f5')
       }
-      
+
       const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}`
       img.src = proxyUrl
     })
@@ -247,15 +248,15 @@ export default function Material() {
 
   const validateBooks = async (bookList: Book[]) => {
     const deduplicatedBooks = deduplicateBooks(bookList)
-    
+
     const validationPromises = deduplicatedBooks.map(async (book) => {
       const { coverUrl, googleTitle, bookUrl } = await fetchBookData(book.title, book.author || '')
       let dominantColor = null
-      
+
       if (coverUrl) {
         dominantColor = await extractDominantColor(coverUrl)
       }
-      
+
       return { ...book, coverUrl, dominantColor, googleTitle, bookUrl }
     })
 
@@ -292,11 +293,11 @@ export default function Material() {
   const fetchBookSummary = async (book: ValidatedBook) => {
     setSummaryLoading(true)
     setBookSummary([])
-    
+
     try {
       const token = localStorage.getItem('auth_token')
       if (!token) return
-      
+
       const response = await fetch('/api/books/summary', {
         method: 'POST',
         headers: {
@@ -308,7 +309,7 @@ export default function Material() {
           author: book.author || ''
         })
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setBookSummary(data.chapters || [])
@@ -384,12 +385,12 @@ export default function Material() {
               {validBooks.map((book) => (
                 <div key={book.id} className="material-card book-card">
                   {book.coverUrl ? (
-                    <div 
+                    <div
                       className="book-cover"
                       style={{ backgroundColor: book.dominantColor || '#f5f5f5' }}
                     >
-                      <img 
-                        src={book.coverUrl} 
+                      <img
+                        src={book.coverUrl}
                         alt={book.title}
                         className="cover-image"
                       />
@@ -408,16 +409,16 @@ export default function Material() {
                     <p className="material-description">{book.description}</p>
                     <div className="book-actions">
                       {book.bookUrl && (
-                        <a 
-                          href={book.bookUrl} 
-                          target="_blank" 
+                        <a
+                          href={book.bookUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="material-link"
                         >
                           View Book
                         </a>
                       )}
-                      <button 
+                      <button
                         className="material-link discuss-book-button"
                         onClick={() => {
                           setDiscussModal({ isOpen: true, book })
@@ -442,21 +443,27 @@ export default function Material() {
             <div className="material-grid">
               {validVideos.map((video) => (
                 <div key={video.id} className="material-card video-card">
-                  {getYouTubeThumbnail(video.url) && (
+                  {(video.thumbnail || getYouTubeThumbnail(video.url)) && (
                     <div className="video-thumbnail">
-                      <img 
-                        src={getYouTubeThumbnail(video.url)} 
+                      <img
+                        src={video.thumbnail || getYouTubeThumbnail(video.url)}
                         alt={video.title}
                         className="thumbnail-image"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          if (video.thumbnail && target.src === video.thumbnail) {
+                            target.src = getYouTubeThumbnail(video.url)
+                          }
+                        }}
                       />
                     </div>
                   )}
                   <div className="video-content">
                     <h3 className="material-title">{video.youtubeTitle}</h3>
                     <p className="material-description">{video.description}</p>
-                    <a 
-                      href={video.url} 
-                      target="_blank" 
+                    <a
+                      href={video.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="material-link"
                     >
@@ -473,11 +480,11 @@ export default function Material() {
           )
         )}
       </div>
-      
+
       {discussModal.isOpen && (
         <div className="discuss-modal-overlay" onClick={() => setDiscussModal({ isOpen: false, book: null })}>
           <div className="discuss-modal" onClick={(e) => e.stopPropagation()}>
-            <button 
+            <button
               className="discuss-modal-close"
               onClick={() => {
                 setDiscussModal({ isOpen: false, book: null })
@@ -494,7 +501,7 @@ export default function Material() {
                   <p className="book-summary-author">by {discussModal.book.author}</p>
                 </div>
               )}
-              
+
               {summaryLoading ? (
                 <div className="summary-loading">
                   <div className="loading-dots">
@@ -513,7 +520,7 @@ export default function Material() {
                     </div>
                   </div>
                   <div className="chapter-navigation">
-                    <button 
+                    <button
                       className="chapter-nav-button"
                       onClick={() => setCurrentChapterIndex(prev => Math.max(0, prev - 1))}
                       disabled={currentChapterIndex === 0}
@@ -523,7 +530,7 @@ export default function Material() {
                     <span className="chapter-indicator">
                       Chapter {currentChapterIndex + 1} of {bookSummary.length}
                     </span>
-                    <button 
+                    <button
                       className="chapter-nav-button"
                       onClick={() => setCurrentChapterIndex(prev => Math.min(bookSummary.length - 1, prev + 1))}
                       disabled={currentChapterIndex === bookSummary.length - 1}
