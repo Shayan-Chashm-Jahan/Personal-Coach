@@ -817,14 +817,33 @@ class ChatAPI:
                         db.add(book)
                         seen_books.add(book_key)
 
+                seen_videos = set()
                 for video_data in recommendations.get("videos", []):
+                    title = video_data.get("title", "")
+                    url = video_data.get("url", "")
+                    
+                    if not title or not url:
+                        continue
+                    
+                    if url.startswith("https://www.youtube.com/results?search_query="):
+                        continue
+                    
+                    video_key = url.lower()
+                    if video_key in seen_videos:
+                        continue
+                    
                     video = Video(
-                        title=video_data.get("title", ""),
-                        url=video_data.get("url", ""),
+                        title=title,
+                        url=url,
                         description=video_data.get("description", ""),
                         user_id=current_user.id
                     )
                     db.add(video)
+                    seen_videos.add(video_key)
+                
+                print(f"\n=== SAVED TO DATABASE ===")
+                print(f"Books saved: {len(seen_books)}")
+                print(f"Videos saved: {len(seen_videos)}")
 
             user.initial_call_completed = True
             db.commit()

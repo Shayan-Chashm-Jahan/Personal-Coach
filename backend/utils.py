@@ -385,9 +385,6 @@ class LLMStreamingClient:
                         text_parts.append(part.text)
 
                 if function_calls_found:
-                    if text_parts:
-                        return " ".join(text_parts)
-
                     if self._is_profile_complete(user_id, db):
                         return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
 
@@ -596,13 +593,24 @@ class LLMStreamingClient:
                 youtube_results = self.search_youtube_videos(search_queries)
                 
                 print(f"\nUpdating video URLs...")
+                valid_videos = []
+                seen_urls = set()
+                
                 for i, video in enumerate(result["videos"]):
                     if i < len(youtube_results):
                         video["url"] = youtube_results[i]["url"]
                         print(f"✓ Video {i+1}: URL added")
+                        
+                        if video["url"].lower() not in seen_urls:
+                            valid_videos.append(video)
+                            seen_urls.add(video["url"].lower())
+                        else:
+                            print(f"✗ Video {i+1}: Duplicate URL, skipping")
                     else:
-                        video["url"] = f"https://www.youtube.com/results?search_query={video.get('title', '').replace(' ', '+')}"
-                        print(f"✗ Video {i+1}: Using search URL fallback")
+                        print(f"✗ Video {i+1}: No YouTube URL found, skipping")
+                
+                result["videos"] = valid_videos
+                print(f"\nFinal video count: {len(valid_videos)}")
             
             return result
 
