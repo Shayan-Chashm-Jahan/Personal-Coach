@@ -148,7 +148,7 @@ html, body {
 .material-header-tabs {
   display: flex;
   gap: 4px;
-  background: #f0f4f8;
+  background: #4a5568;
   padding: 4px;
   border-radius: 8px;
 }
@@ -160,15 +160,15 @@ html, body {
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #4a5568;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
-.material-header-tab:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: #2d3748;
+.material-header-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 .material-header-tab.active {
@@ -1727,6 +1727,7 @@ html, body {
   display: flex;
   gap: 12px;
   padding: 0;
+  align-items: flex-end;
 }
 
 .chat-input {
@@ -1739,6 +1740,16 @@ html, body {
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.5;
+  min-height: 44px;
+  max-height: 120px;
+  overflow-y: hidden;
+}
+
+.chat-input::-webkit-scrollbar {
+  width: 0;
 }
 
 .chat-input:focus {

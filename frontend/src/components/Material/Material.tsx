@@ -49,6 +49,7 @@ export default function Material() {
   const [chatLoading, setChatLoading] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(true)
   const chatMessagesEndRef = useRef<HTMLDivElement>(null)
+  const chatTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -288,6 +289,20 @@ export default function Material() {
   useEffect(() => {
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
+
+  useEffect(() => {
+    if (chatTextareaRef.current) {
+      chatTextareaRef.current.style.height = 'auto'
+      const newHeight = Math.min(chatTextareaRef.current.scrollHeight, 120)
+      chatTextareaRef.current.style.height = `${newHeight}px`
+      
+      if (chatTextareaRef.current.scrollHeight > 120) {
+        chatTextareaRef.current.style.overflowY = 'auto'
+      } else {
+        chatTextareaRef.current.style.overflowY = 'hidden'
+      }
+    }
+  }, [chatInput])
 
   useEffect(() => {
     if (location.pathname === '/material/books') {
@@ -623,18 +638,20 @@ export default function Material() {
                     <div ref={chatMessagesEndRef} />
                   </div>
                   <div className="chat-input-container">
-                    <input
-                      type="text"
+                    <textarea
+                      ref={chatTextareaRef}
                       className="chat-input"
                       placeholder="Ask about this book..."
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !chatLoading && chatInput.trim()) {
+                        if (e.key === 'Enter' && !e.shiftKey && !chatLoading && chatInput.trim()) {
+                          e.preventDefault()
                           handleSendMessage()
                         }
                       }}
                       disabled={chatLoading}
+                      rows={1}
                     />
                     <button 
                       className="chat-send-button" 
