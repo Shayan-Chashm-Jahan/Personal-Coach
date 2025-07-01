@@ -426,23 +426,6 @@ export default function Material() {
 
   return (
     <div className="section-content">
-      <div className="material-tabs-container">
-        <div className="material-tabs">
-          <button
-            className={`material-tab ${activeTab === 'books' ? 'active' : ''}`}
-            onClick={() => navigate('/material/books')}
-          >
-            Books
-          </button>
-          <button
-            className={`material-tab ${activeTab === 'videos' ? 'active' : ''}`}
-            onClick={() => navigate('/material/videos')}
-          >
-            Videos
-          </button>
-        </div>
-      </div>
-
       <div className="material-content">
         {loading ? (
           <div className="material-loading">

@@ -776,6 +776,22 @@ function AppRoutes() {
     <div className="main-content">
       <div className="section-header">
         <h1>{getSectionTitle()}</h1>
+        {activeSection === SECTIONS.MATERIAL && (
+          <div className="material-header-tabs">
+            <button
+              className={`material-header-tab ${location.pathname === '/material/books' || location.pathname === '/material' ? 'active' : ''}`}
+              onClick={() => navigate('/material/books')}
+            >
+              Books
+            </button>
+            <button
+              className={`material-header-tab ${location.pathname === '/material/videos' ? 'active' : ''}`}
+              onClick={() => navigate('/material/videos')}
+            >
+              Videos
+            </button>
+          </div>
+        )}
         {activeSection === SECTIONS.CHAT && messages.length > 0 && (
           <Link
             to="/chat"

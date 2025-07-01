@@ -145,6 +145,42 @@ html, body {
   font-weight: 700;
 }
 
+.material-header-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f0f4f8;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.material-header-tab {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.material-header-tab:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #2d3748;
+}
+
+.material-header-tab.active {
+  background: white;
+  color: #2d3748;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.material-header-tab:focus {
+  outline: none;
+}
+
 @media (max-width: 1024px) {
   .main-content {
     margin-left: 180px;
