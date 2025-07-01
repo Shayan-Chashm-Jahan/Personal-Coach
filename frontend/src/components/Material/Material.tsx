@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 
@@ -48,6 +48,7 @@ export default function Material() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(true)
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null)
 
   const getYouTubeThumbnail = (url: string): string => {
     const videoId = extractYouTubeVideoId(url)
@@ -285,6 +286,10 @@ export default function Material() {
   }, [])
 
   useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
+  useEffect(() => {
     if (location.pathname === '/material/books') {
       setActiveTab('books')
     } else if (location.pathname === '/material/videos') {
@@ -322,6 +327,71 @@ export default function Material() {
       console.error('Error fetching book summary:', error)
     } finally {
       setSummaryLoading(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || chatLoading || !discussModal.book) return
+
+    const userMessage = chatInput.trim()
+    setChatMessages(prev => [...prev, { text: userMessage, sender: 'user' }])
+    setChatInput('')
+    setChatLoading(true)
+    
+    setChatMessages(prev => [...prev, { text: '', sender: 'assistant' }])
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) return
+
+      const response = await fetch('/api/books/discuss', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          bookId: discussModal.book.id,
+          bookTitle: discussModal.book.googleTitle || discussModal.book.title,
+          bookAuthor: discussModal.book.author || '',
+          currentChapterIndex: currentChapterIndex,
+          chapters: bookSummary,
+          history: chatMessages.map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.text
+          }))
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      setChatMessages(prev => {
+        const newMessages = [...prev]
+        newMessages[newMessages.length - 1] = {
+          text: data.response,
+          sender: 'assistant'
+        }
+        return newMessages
+      })
+    } catch (error) {
+      console.error('Error sending chat message:', error)
+      setChatMessages(prev => {
+        const newMessages = [...prev]
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'assistant') {
+          newMessages[newMessages.length - 1] = {
+            text: 'Sorry, I encountered an error. Please try again.',
+            sender: 'assistant'
+          }
+        }
+        return newMessages
+      })
+    } finally {
+      setChatLoading(false)
     }
   }
 
@@ -427,6 +497,8 @@ export default function Material() {
                         onClick={() => {
                           setDiscussModal({ isOpen: true, book })
                           setCurrentChapterIndex(0)
+                          setChatMessages([])
+                          setChatInput('')
                           fetchBookSummary(book)
                         }}
                       >
@@ -516,13 +588,25 @@ export default function Material() {
                       <div key={idx} className={`chat-message ${msg.sender}`}>
                         <div className="chat-message-content">
                           {msg.sender === 'assistant' ? (
-                            <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            msg.text ? (
+                              <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            ) : (
+                              <div className="typing-container">
+                                <div className="typing-indicator">
+                                  <span></span>
+                                  <span></span>
+                                  <span></span>
+                                </div>
+                                <span className="typing-text">Coach is typing...</span>
+                              </div>
+                            )
                           ) : (
                             msg.text
                           )}
                         </div>
                       </div>
                     ))}
+                    <div ref={chatMessagesEndRef} />
                   </div>
                   <div className="chat-input-container">
                     <input
@@ -532,13 +616,17 @@ export default function Material() {
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !chatLoading) {
-                          // TODO: Implement chat functionality
+                        if (e.key === 'Enter' && !chatLoading && chatInput.trim()) {
+                          handleSendMessage()
                         }
                       }}
                       disabled={chatLoading}
                     />
-                    <button className="chat-send-button" disabled={chatLoading || !chatInput.trim()}>
+                    <button 
+                      className="chat-send-button" 
+                      disabled={chatLoading || !chatInput.trim()}
+                      onClick={handleSendMessage}
+                    >
                       Send
                     </button>
                   </div>

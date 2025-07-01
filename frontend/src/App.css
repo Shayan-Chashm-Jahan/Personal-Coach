@@ -1615,13 +1615,6 @@ html, body {
   transform: translateY(-50%) scale(1.05);
 }
 
-.chat-toggle-button.chat-toggle-with-text {
-  width: auto;
-  padding: 0 12px;
-  font-weight: 500;
-  font-size: 13px;
-  left: 10px;
-}
 
 .chat-container {
   display: flex;

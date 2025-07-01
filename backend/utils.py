@@ -694,6 +694,83 @@ class LLMStreamingClient:
             return []
 
 
+    def book_discussion_response(
+        self,
+        message: str,
+        book_title: str,
+        book_author: str,
+        current_chapter: dict,
+        all_chapters: List[dict],
+        history: Optional[List[Dict[str, str]]] = None,
+        current_chapter_index: int = 0
+    ) -> str:
+        try:
+            print(f"\n=== BOOK DISCUSSION DEBUG ===")
+            print(f"Message: {message}")
+            print(f"Book: {book_title} by {book_author}")
+            print(f"Current chapter: {current_chapter.get('chapter', 'Unknown')}")
+            print(f"History length: {len(history) if history else 0}")
+            
+            client = self._get_client()
+            
+            processed_history, summary = self._build_conversation_context(history)
+            
+            conversation_context = ""
+            if summary:
+                conversation_context = f"Previous conversation summary: {summary}\n\n"
+            
+            if processed_history:
+                conversation_context += "Recent conversation:\n"
+                for msg in processed_history[-10:]:
+                    role = "User" if msg.get("role") == "user" else "Assistant"
+                    conversation_context += f"{role}: {msg.get('content', '')}\n"
+            
+            all_chapters_text = "\n\n".join([
+                f"Chapter: {ch.get('chapter', 'Unknown')}\n{ch.get('content', '')}"
+                for ch in all_chapters
+            ])
+            
+            prompt = config_manager.book_discussion_prompt.format(
+                book_title=book_title,
+                book_author=book_author,
+                current_chapter_title=current_chapter.get('chapter', 'Unknown'),
+                current_chapter_content=current_chapter.get('content', ''),
+                all_chapters=all_chapters_text,
+                conversation_context=conversation_context
+            )
+            
+            contents = [{
+                "role": "user",
+                "parts": [{"text": message}]
+            }]
+            
+            print("\n=== COMPLETE PROMPT BEING SENT TO AI ===")
+            print(f"System: {prompt}")
+            print(f"User: {message}")
+            print("=== END OF PROMPT ===\n")
+            
+            response = client.models.generate_content(
+                model=config_manager.model_fast,
+                contents=contents,
+                config={
+                    "tools": [{"googleSearch": {}}],
+                    "systemInstruction": {
+                        "parts": [{"text": prompt}]
+                    },
+                    "temperature": 0.5
+                }
+            )
+            
+            print("Got response from AI")
+            return response.text if response.text else ""
+                    
+        except Exception as e:
+            print(f"Error in book_discussion_response: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+
 llm_client = LLMStreamingClient()
 
 

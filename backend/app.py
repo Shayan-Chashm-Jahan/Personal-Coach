@@ -54,6 +54,15 @@ class BookSummaryRequest(BaseModel):
     title: str
     author: str
 
+class BookDiscussionRequest(BaseModel):
+    message: str
+    bookId: str
+    bookTitle: str
+    bookAuthor: str
+    currentChapterIndex: int
+    chapters: List[dict]
+    history: List[HistoryItem] = []
+
 
 security = HTTPBearer()
 
@@ -172,6 +181,10 @@ class ChatAPI:
         @self.app.post("/api/books/summary")
         async def generate_book_summary_route(request: BookSummaryRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.generate_book_summary(request, current_user, db)
+
+        @self.app.post("/api/books/discuss")
+        async def book_discussion_route(request: BookDiscussionRequest, current_user: User = Depends(self.get_current_user)):
+            return await self.book_discussion(request, current_user)
 
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -984,6 +997,35 @@ class ChatAPI:
             return {"chapters": chapters}
         except Exception as e:
             return {"chapters": []}
+
+    async def book_discussion(
+        self,
+        request: BookDiscussionRequest,
+        current_user: User
+    ):
+        try:
+            history_dict = self._convert_history_to_dict(request.history)
+            
+            current_chapter = {}
+            if 0 <= request.currentChapterIndex < len(request.chapters):
+                current_chapter = request.chapters[request.currentChapterIndex]
+            
+            response = llm_client.book_discussion_response(
+                message=request.message,
+                book_title=request.bookTitle,
+                book_author=request.bookAuthor,
+                current_chapter=current_chapter,
+                all_chapters=request.chapters,
+                history=history_dict,
+                current_chapter_index=request.currentChapterIndex
+            )
+            
+            return {"response": response}
+        except Exception as e:
+            import traceback
+            error_details = f"{str(e)}\n{traceback.format_exc()}"
+            print(f"Error in book_discussion: {error_details}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 chat_api = ChatAPI()
