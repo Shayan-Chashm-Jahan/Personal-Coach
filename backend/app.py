@@ -1,6 +1,7 @@
 import json
+import threading
 from datetime import datetime, timedelta
-from typing import List, Iterator, Optional
+from typing import List, Iterator, Optional, Dict
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 from config import config_manager
-from models import User, Memory, Message, Goal, Chat, Book, get_db, create_tables
+from models import User, Memory, Message, Goal, Chat, Book, get_db, create_tables, SessionLocal
 from utils import stream_chat_response, generate_initial_call_response, llm_client
 
 
@@ -193,6 +194,22 @@ class ChatAPI:
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
+    
+    def _extract_memories_background(
+        self, 
+        message: str, 
+        response: str, 
+        history: List[Dict[str, str]], 
+        user_id: int
+    ):
+        try:
+            db = SessionLocal()
+            memories = llm_client._extract_memories(message, response, history, user_id, db)
+            if memories:
+                llm_client.save_memories_to_db(memories, user_id, db)
+            db.close()
+        except Exception:
+            pass
 
     def get_current_user(
         self,
@@ -1047,6 +1064,18 @@ class ChatAPI:
                     
                     book.chat = json.dumps(chat_history)
                     db.commit()
+            
+            book_context_message = f"Discussing book: {request.bookTitle} by {request.bookAuthor}"
+            enhanced_history = history_dict.copy() if history_dict else []
+            if not any(msg.get('content', '').startswith('Discussing book:') for msg in enhanced_history):
+                enhanced_history.insert(0, {'role': 'system', 'content': book_context_message})
+            
+            thread = threading.Thread(
+                target=self._extract_memories_background,
+                args=(request.message, response, enhanced_history, current_user.id)
+            )
+            thread.daemon = True
+            thread.start()
             
             return {"response": response}
         except Exception as e:
