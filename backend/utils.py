@@ -160,13 +160,6 @@ class LLMStreamingClient:
             conversation_context=conversation_context,
             existing_memories=existing_memories_text
         )
-        
-        print("\n=== MEMORY EXTRACTION DEBUG ===")
-        print(f"User Message: {user_message}")
-        print(f"Assistant Response: {assistant_response[:200]}..." if len(assistant_response) > 200 else f"Assistant Response: {assistant_response}")
-        print(f"Conversation Context: {conversation_context[:500]}..." if len(conversation_context) > 500 else f"Conversation Context: {conversation_context}")
-        print(f"Existing Memories: {existing_memories_text[:500]}..." if len(existing_memories_text) > 500 else f"Existing Memories: {existing_memories_text}")
-        print("==============================\n")
 
         try:
             client = self._get_client()
@@ -180,9 +173,6 @@ class LLMStreamingClient:
             )
 
             content = response.text.strip() if response and response.text else ""
-            
-            print(f"Raw LLM Response: {content}")
-            print("==============================\n")
 
             if content.upper() == "NONE" or not content:
                 return []
@@ -705,11 +695,6 @@ class LLMStreamingClient:
         current_chapter_index: int = 0
     ) -> str:
         try:
-            print(f"\n=== BOOK DISCUSSION DEBUG ===")
-            print(f"Message: {message}")
-            print(f"Book: {book_title} by {book_author}")
-            print(f"Current chapter: {current_chapter.get('chapter', 'Unknown')}")
-            print(f"History length: {len(history) if history else 0}")
             
             client = self._get_client()
             
@@ -744,11 +729,6 @@ class LLMStreamingClient:
                 "parts": [{"text": message}]
             }]
             
-            print("\n=== COMPLETE PROMPT BEING SENT TO AI ===")
-            print(f"System: {prompt}")
-            print(f"User: {message}")
-            print("=== END OF PROMPT ===\n")
-            
             response = client.models.generate_content(
                 model=config_manager.model_fast,
                 contents=contents,
@@ -761,7 +741,6 @@ class LLMStreamingClient:
                 }
             )
             
-            print("Got response from AI")
             return response.text if response.text else ""
                     
         except Exception as e:

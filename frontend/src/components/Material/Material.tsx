@@ -494,12 +494,35 @@ export default function Material() {
                       )}
                       <button
                         className="material-link discuss-book-button"
-                        onClick={() => {
+                        onClick={async () => {
+                          setChatMessages([])
                           setDiscussModal({ isOpen: true, book })
                           setCurrentChapterIndex(0)
-                          setChatMessages([])
                           setChatInput('')
+                          setIsChatOpen(true)
                           fetchBookSummary(book)
+                          
+                          try {
+                            const token = localStorage.getItem('auth_token')
+                            if (token) {
+                              const response = await fetch(`/api/books/${book.id}/chat`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                              })
+                              if (response.ok) {
+                                const data = await response.json()
+                                const formattedChat = data.chat.map((msg: any) => ({
+                                  text: msg.content,
+                                  sender: msg.role === 'user' ? 'user' : 'assistant'
+                                }))
+                                setChatMessages(formattedChat)
+                              } else {
+                                setChatMessages([])
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Error loading chat history:', error)
+                            setChatMessages([])
+                          }
                         }}
                       >
                         Discuss
@@ -558,7 +581,14 @@ export default function Material() {
       </div>
 
       {discussModal.isOpen && (
-        <div className="discuss-modal-overlay" onClick={() => setDiscussModal({ isOpen: false, book: null })}>
+        <div className="discuss-modal-overlay" onClick={() => {
+          setDiscussModal({ isOpen: false, book: null })
+          setBookSummary([])
+          setCurrentChapterIndex(0)
+          setChatMessages([])
+          setChatInput('')
+          setIsChatOpen(true)
+        }}>
           <div className="discuss-modal" onClick={(e) => e.stopPropagation()}>
             <button
               className="discuss-modal-close"
@@ -568,6 +598,7 @@ export default function Material() {
                 setCurrentChapterIndex(0)
                 setChatMessages([])
                 setChatInput('')
+                setIsChatOpen(true)
               }}
             >
               ×
@@ -615,7 +646,7 @@ export default function Material() {
                       placeholder="Ask about this book..."
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' && !chatLoading && chatInput.trim()) {
                           handleSendMessage()
                         }

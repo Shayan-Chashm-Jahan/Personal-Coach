@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 from config import config_manager
-from models import User, Memory, Message, Goal, Chat, get_db, create_tables
+from models import User, Memory, Message, Goal, Chat, Book, get_db, create_tables
 from utils import stream_chat_response, generate_initial_call_response, llm_client
 
 
@@ -183,8 +183,12 @@ class ChatAPI:
             return await self.generate_book_summary(request, current_user, db)
 
         @self.app.post("/api/books/discuss")
-        async def book_discussion_route(request: BookDiscussionRequest, current_user: User = Depends(self.get_current_user)):
-            return await self.book_discussion(request, current_user)
+        async def book_discussion_route(request: BookDiscussionRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.book_discussion(request, current_user, db)
+        
+        @self.app.get("/api/books/{book_id}/chat")
+        async def get_book_chat_route(book_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_book_chat(book_id, current_user, db)
 
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -1001,7 +1005,8 @@ class ChatAPI:
     async def book_discussion(
         self,
         request: BookDiscussionRequest,
-        current_user: User
+        current_user: User,
+        db: Session = Depends(get_db)
     ):
         try:
             history_dict = self._convert_history_to_dict(request.history)
@@ -1020,11 +1025,55 @@ class ChatAPI:
                 current_chapter_index=request.currentChapterIndex
             )
             
+            if request.bookId:
+                book = db.query(Book).filter(
+                    Book.id == int(request.bookId),
+                    Book.user_id == current_user.id
+                ).first()
+                
+                if book:
+                    chat_history = json.loads(book.chat) if book.chat else []
+                    
+                    chat_history.append({
+                        "role": "user",
+                        "content": request.message,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    chat_history.append({
+                        "role": "assistant", 
+                        "content": response,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
+                    book.chat = json.dumps(chat_history)
+                    db.commit()
+            
             return {"response": response}
         except Exception as e:
-            import traceback
-            error_details = f"{str(e)}\n{traceback.format_exc()}"
-            print(f"Error in book_discussion: {error_details}")
+            db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_book_chat(
+        self,
+        book_id: int,
+        current_user: User,
+        db: Session
+    ):
+        try:
+            book = db.query(Book).filter(
+                Book.id == book_id,
+                Book.user_id == current_user.id
+            ).first()
+            
+            if not book:
+                raise HTTPException(status_code=404, detail="Book not found")
+            
+            chat_history = json.loads(book.chat) if book.chat else []
+            
+            return {"chat": chat_history}
+        except HTTPException:
+            raise
+        except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
 

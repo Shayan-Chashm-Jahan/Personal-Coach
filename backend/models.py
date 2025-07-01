@@ -99,6 +99,7 @@ class Book(Base):
     author = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)
+    chat = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
