@@ -1516,6 +1516,11 @@ html, body {
   border-radius: 4px;
   transition: all 0.2s ease;
   z-index: 100;
+  outline: none;
+}
+
+.discuss-modal-close:focus {
+  outline: none;
 }
 
 .discuss-modal-close:hover {
