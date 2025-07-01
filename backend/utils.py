@@ -187,17 +187,25 @@ class LLMStreamingClient:
         if not memory_list:
             return
 
-
-        from models import Memory
+        from models import UserProfile
+        from datetime import datetime
 
         try:
+            profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+            if not profile:
+                profile = UserProfile(user_id=user_id, memories="[]")
+                db.add(profile)
+                db.flush()
+            
+            existing_memories = json.loads(profile.memories) if profile.memories else []
+            
             for memory_content in memory_list:
-                new_memory = Memory(
-                    content=memory_content,
-                    user_id=user_id
-                )
-                db.add(new_memory)
-
+                existing_memories.append({
+                    "content": memory_content,
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            profile.memories = json.dumps(existing_memories)
             db.commit()
         except Exception as e:
             db.rollback()
@@ -226,17 +234,21 @@ class LLMStreamingClient:
 
     def _build_memories_context(self, user_id: int, db: Session) -> Optional[str]:
         try:
-            from models import Memory
-            memories = db.query(Memory).filter(
-                Memory.user_id == user_id
-            ).order_by(Memory.created_at.desc()).limit(15).all()
-
+            from models import UserProfile
+            profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+            
+            if not profile or not profile.memories:
+                return None
+            
+            memories = json.loads(profile.memories)
             if not memories:
                 return None
-
+            
+            recent_memories = memories[-15:] if len(memories) > 15 else memories
+            
             context_parts = ["=== COACH NOTES & INSIGHTS ==="]
-            for memory in memories:
-                context_parts.append(f"• {memory.content}")
+            for memory in recent_memories:
+                context_parts.append(f"• {memory['content']}")
 
             context_parts.append("=== END COACH NOTES ===")
             return "\n".join(context_parts)
@@ -453,7 +465,7 @@ class LLMStreamingClient:
         if not user_id or not db:
             return
 
-        from models import UserProfile, Memory
+        from models import UserProfile
         from datetime import datetime, timezone
 
         if 'user_profile_key' not in args or 'user_profile_value' not in args:
@@ -465,14 +477,23 @@ class LLMStreamingClient:
         if key == 'memories':
             try:
                 memory_list = self._extract_list_from_response(value)
-                for memory_content in memory_list:
-                    if memory_content and str(memory_content).strip():
-                        new_memory = Memory(
-                            content=str(memory_content).strip(),
-                            user_id=user_id
-                        )
-                        db.add(new_memory)
                 if memory_list:
+                    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+                    if not profile:
+                        profile = UserProfile(user_id=user_id, memories="[]")
+                        db.add(profile)
+                        db.flush()
+                    
+                    existing_memories = json.loads(profile.memories) if profile.memories else []
+                    
+                    for memory_content in memory_list:
+                        if memory_content and str(memory_content).strip():
+                            existing_memories.append({
+                                "content": str(memory_content).strip(),
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            })
+                    
+                    profile.memories = json.dumps(existing_memories)
                     db.commit()
             except Exception as e:
                 db.rollback()
@@ -507,7 +528,7 @@ class LLMStreamingClient:
         if not user_id or not db:
             return False
 
-        from models import UserProfile, Memory
+        from models import UserProfile
 
         profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
         if not profile:
@@ -521,8 +542,8 @@ class LLMStreamingClient:
 
         basic_info_complete = all(field is not None and str(field).strip() != '' for field in required_fields)
 
-        memories_count = db.query(Memory).filter(Memory.user_id == user_id).count()
-        has_sufficient_memories = memories_count >= 5
+        memories_list = json.loads(profile.memories) if profile.memories else []
+        has_sufficient_memories = len(memories_list) >= 5
 
         return basic_info_complete and has_sufficient_memories
 

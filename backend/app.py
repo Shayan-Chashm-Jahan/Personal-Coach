@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 from config import config_manager
-from models import User, Memory, Message, Goal, Chat, Book, get_db, create_tables, SessionLocal
+from models import User, UserProfile, Message, Goal, Chat, Book, get_db, create_tables, SessionLocal
 from utils import stream_chat_response, generate_initial_call_response, llm_client
 
 
@@ -320,19 +320,19 @@ class ChatAPI:
         db: Session = Depends(get_db)
     ):
         try:
-            user_memories = (
-                db.query(Memory)
-                .filter(Memory.user_id == current_user.id)
-                .order_by(Memory.created_at.desc())
-                .all()
-            )
+            profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+            
+            if not profile or not profile.memories:
+                return {"memories": []}
+            
+            memories_list = json.loads(profile.memories)
             memories = [
                 {
-                    "id": str(memory.id),
-                    "content": memory.content,
-                    "timestamp": memory.created_at.isoformat()
+                    "id": str(idx),
+                    "content": memory["content"],
+                    "timestamp": memory["timestamp"]
                 }
-                for memory in user_memories
+                for idx, memory in enumerate(memories_list)
             ]
             return {"memories": memories}
         except Exception as e:
@@ -345,16 +345,21 @@ class ChatAPI:
         db: Session = Depends(get_db)
     ):
         try:
-            memory = db.query(Memory).filter(
-                Memory.id == int(memory_id),
-                Memory.user_id == current_user.id
-            ).first()
-
-            if not memory:
+            profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+            
+            if not profile or not profile.memories:
                 raise HTTPException(status_code=404, detail="Memory not found")
-
-            db.delete(memory)
+            
+            memories_list = json.loads(profile.memories)
+            memory_idx = int(memory_id)
+            
+            if memory_idx < 0 or memory_idx >= len(memories_list):
+                raise HTTPException(status_code=404, detail="Memory not found")
+            
+            memories_list.pop(memory_idx)
+            profile.memories = json.dumps(memories_list)
             db.commit()
+            
             return {"message": "Memory deleted successfully"}
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid memory ID")

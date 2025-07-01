@@ -17,7 +17,6 @@ class User(Base):
     initial_call_completed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    memories = relationship("Memory", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
@@ -33,22 +32,13 @@ class UserProfile(Base):
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
     birth_date = Column(Date, nullable=True)
+    memories = Column(Text, nullable=True, default="[]")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
 
     user = relationship("User", back_populates="profile")
 
-
-class Memory(Base):
-    __tablename__ = "memories"
-
-    id = Column(Integer, primary_key=True, index=True)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    user = relationship("User", back_populates="memories")
 
 
 class Chat(Base):
