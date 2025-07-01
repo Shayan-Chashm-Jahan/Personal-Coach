@@ -1643,6 +1643,11 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  direction: rtl;
+}
+
+.chat-messages > * {
+  direction: ltr;
 }
 
 .chat-message {
