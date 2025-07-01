@@ -1501,25 +1501,25 @@ html, body {
 
 .discuss-modal-close {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
   background: transparent;
   border: none;
-  font-size: 24px;
+  font-size: 16px;
   cursor: pointer;
   color: #666666;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
   transition: all 0.2s ease;
+  z-index: 100;
 }
 
 .discuss-modal-close:hover {
-  background: #f5f5f5;
-  color: #1a202c;
+  color: #333333;
 }
 
 .discuss-modal-content {
