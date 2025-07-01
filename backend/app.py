@@ -1,6 +1,6 @@
 import json
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Iterator, Optional, Dict
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -459,7 +459,7 @@ class ChatAPI:
             ).order_by(Message.created_at.desc()).first()
 
             if existing_message:
-                time_diff = datetime.utcnow() - existing_message.created_at
+                time_diff = datetime.now(timezone.utc) - existing_message.created_at
                 if time_diff < timedelta(minutes=1):
                     return {"message": "Duplicate message not saved"}
 
@@ -470,7 +470,7 @@ class ChatAPI:
                 chat_id=message_data.chat_id
             )
 
-            chat.updated_at = datetime.utcnow()
+            chat.updated_at = datetime.now(timezone.utc)
             db.add(new_message)
             db.commit()
             db.refresh(new_message)
@@ -816,7 +816,6 @@ class ChatAPI:
     ):
         try:
             from models import Message, Book, Video
-            import requests
 
             user = db.query(User).filter(User.id == current_user.id).first()
             if not user:
@@ -1011,7 +1010,7 @@ class ChatAPI:
                 try:
                     chapters = json.loads(book.summary)
                     return {"chapters": chapters}
-                except json.JSONDecodeError as e:
+                except json.JSONDecodeError:
                     pass
 
             chapters = llm_client.generate_book_summary(request.title, request.author)
@@ -1021,7 +1020,7 @@ class ChatAPI:
                 db.commit()
 
             return {"chapters": chapters}
-        except Exception as e:
+        except Exception:
             return {"chapters": []}
 
     async def book_discussion(
@@ -1043,8 +1042,7 @@ class ChatAPI:
                 book_author=request.bookAuthor,
                 current_chapter=current_chapter,
                 all_chapters=request.chapters,
-                history=history_dict,
-                current_chapter_index=request.currentChapterIndex
+                history=history_dict
             )
             
             if request.bookId:

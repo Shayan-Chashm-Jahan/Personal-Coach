@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Date, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,7 +15,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     initial_call_completed = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
@@ -33,8 +33,8 @@ class UserProfile(Base):
     last_name = Column(String(100), nullable=True)
     birth_date = Column(Date, nullable=True)
     memories = Column(Text, nullable=True, default="[]")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
 
     user = relationship("User", back_populates="profile")
@@ -46,8 +46,8 @@ class Chat(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="chats")
@@ -60,7 +60,7 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
     sender = Column(String(10), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     chat_id = Column(Integer, ForeignKey("chats.id"), nullable=False)
 
@@ -75,7 +75,7 @@ class Goal(Base):
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=False)
     status = Column(String(20), default="Active", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="goals")
@@ -90,7 +90,7 @@ class Book(Base):
     description = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)
     chat = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="books")
@@ -104,7 +104,7 @@ class Video(Base):
     url = Column(String(1000), nullable=False)
     description = Column(Text, nullable=True)
     thumbnail = Column(String(1000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="videos")

@@ -130,7 +130,7 @@ class LLMStreamingClient:
                 result = [str(item).strip() for item in parsed_list if str(item).strip()]
                 return result
             return []
-        except Exception as e:
+        except Exception:
             return []
 
     def _extract_memories(self, user_message: str, assistant_response: str, history: Optional[List[Dict[str, str]]] = None, user_id: Optional[int] = None, db: Optional[Session] = None) -> List[str]:
@@ -180,7 +180,7 @@ class LLMStreamingClient:
             memories = self._extract_list_from_response(content)
             return memories
 
-        except Exception as e:
+        except Exception:
             return []
 
     def save_memories_to_db(self, memory_list: List[str], user_id: int, db: Session) -> None:
@@ -207,7 +207,7 @@ class LLMStreamingClient:
             
             profile.memories = json.dumps(existing_memories)
             db.commit()
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
 
@@ -294,9 +294,7 @@ class LLMStreamingClient:
     def _build_contents(
         self,
         text: str,
-        history: Optional[List[Dict[str, str]]],
-        user_id: Optional[int] = None,
-        db: Optional[Session] = None
+        history: Optional[List[Dict[str, str]]]
     ) -> List[Dict[str, str]]:
         contents = []
         
@@ -328,7 +326,7 @@ class LLMStreamingClient:
             client = self._get_client()
 
             system_instruction = self._build_system_instruction(user_id, db)
-            contents = self._build_contents(text, history, user_id, db)
+            contents = self._build_contents(text, history)
 
             response_stream = client.models.generate_content_stream(
                 model=config_manager.model_pro,
@@ -346,7 +344,7 @@ class LLMStreamingClient:
                 if chunk.text:
                     yield chunk.text
 
-        except Exception as e:
+        except Exception:
             raise
 
     def initial_call_response(
@@ -360,7 +358,7 @@ class LLMStreamingClient:
         try:
             client = self._get_client()
 
-            contents = self._build_contents(text, history, user_id, db)
+            contents = self._build_contents(text, history)
 
             if prompt:
                 system_content = types.Content(
@@ -495,7 +493,7 @@ class LLMStreamingClient:
                     
                     profile.memories = json.dumps(existing_memories)
                     db.commit()
-            except Exception as e:
+            except Exception:
                 db.rollback()
             return
 
@@ -712,8 +710,7 @@ class LLMStreamingClient:
         book_author: str,
         current_chapter: dict,
         all_chapters: List[dict],
-        history: Optional[List[Dict[str, str]]] = None,
-        current_chapter_index: int = 0
+        history: Optional[List[Dict[str, str]]] = None
     ) -> str:
         try:
             
