@@ -1011,6 +1011,7 @@ html, body {
   text-align: center;
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
 }
 
 .initial-call-header h2 {
@@ -1024,6 +1025,33 @@ html, body {
   margin: 0;
   color: rgba(255, 255, 255, 0.8);
   font-size: 1rem;
+}
+
+.initial-call-logout-button {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.initial-call-logout-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.initial-call-logout-button:active {
+  transform: translateY(0);
 }
 
 .initial-call-messages-container {

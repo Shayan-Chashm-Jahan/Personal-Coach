@@ -91,14 +91,14 @@ function AppRoutes() {
   }, [isAuthenticated, currentChatId])
 
   useEffect(() => {
-    if (isAuthenticated && activeSection === SECTIONS.CHAT && chats.length === 0 && !chatsLoading && !currentChatId) {
+    if (isAuthenticated && initialCallCompleted === true && activeSection === SECTIONS.CHAT && chats.length === 0 && !chatsLoading && !currentChatId) {
       createChat().then(newChatId => {
         if (newChatId) {
           navigate(`/chat/${newChatId}`)
         }
       })
     }
-  }, [isAuthenticated, activeSection, chats.length, chatsLoading, currentChatId, navigate])
+  }, [isAuthenticated, initialCallCompleted, activeSection, chats.length, chatsLoading, currentChatId, navigate])
 
   useEffect(() => {
     checkAuthStatus()
@@ -113,7 +113,9 @@ function AppRoutes() {
 
   useEffect(() => {
     const path = location.pathname
-    if (path.startsWith('/chat/')) {
+    if (path === '/initial_call') {
+      setActiveSection('')
+    } else if (path.startsWith('/chat/')) {
       setActiveSection(SECTIONS.CHAT)
     } else if (path === '/goals') {
       setActiveSection(SECTIONS.GOALS)
@@ -122,9 +124,11 @@ function AppRoutes() {
     } else if (path.startsWith('/material')) {
       setActiveSection(SECTIONS.MATERIAL)
     } else if (path === '/chat' || path === '/') {
-      setActiveSection(SECTIONS.CHAT)
+      if (initialCallCompleted === true) {
+        setActiveSection(SECTIONS.CHAT)
+      }
     }
-  }, [location.pathname])
+  }, [location.pathname, initialCallCompleted])
 
   useEffect(() => {
     if (chat_id && chat_id !== currentChatId) {
@@ -153,6 +157,9 @@ function AppRoutes() {
       if (response.ok) {
         const data = await response.json()
         setInitialCallCompleted(data.initial_call_completed)
+        if (!data.initial_call_completed && location.pathname !== '/initial_call') {
+          navigate('/initial_call')
+        }
       }
     } catch (error) {
       console.error('Failed to fetch user status:', error)
@@ -841,7 +848,16 @@ function AppRoutes() {
     return renderAuthForm()
   }
 
-  if (isAuthenticated && initialCallCompleted === false) {
+  if (isAuthenticated && initialCallCompleted === null) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (isAuthenticated && (initialCallCompleted === false || location.pathname === '/initial_call')) {
     return <InterviewPending getAuthHeaders={getAuthHeaders} showNotification={showNotification} logout={logout} navigate={handleSectionChange} setInitialCallCompleted={setInitialCallCompleted} />
   }
 
@@ -902,6 +918,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppRoutes />} />
+        <Route path="/initial_call" element={<AppRoutes />} />
         <Route path="/chat" element={<AppRoutes />} />
         <Route path="/chat/:chat_id" element={<AppRoutes />} />
         <Route path="/goals" element={<AppRoutes />} />

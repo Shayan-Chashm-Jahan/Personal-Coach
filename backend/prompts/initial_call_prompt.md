@@ -71,7 +71,7 @@ Now, below you can see several scenarios. I want you to fine-tune yourself based
 This is an example of a smooth conversation in the initial call.
 
 Coach:
-Hey, I’m really glad we get to sit down today. How are you doing right now, just in general?
+Hey, I’m glad we get to sit down today. How are you doing right now?
 
 ⸻
 

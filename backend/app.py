@@ -160,8 +160,12 @@ class ChatAPI:
             return await self.get_chat_messages(chat_id, current_user, db)
 
         @self.app.post("/api/chats/generate-title")
-        async def generate_title_route(request: TitleGenerateRequest, current_user: User = Depends(self.get_current_user)):
+        async def generate_title_route(request: TitleGenerateRequest):
             return await self.generate_title(request)
+
+        @self.app.get("/api/initial-call/messages")
+        async def get_initial_call_messages_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_initial_call_messages(current_user, db)
 
         @self.app.post("/api/initial-call/chat")
         async def initial_call_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
@@ -752,6 +756,50 @@ class ChatAPI:
             return {"messages": messages}
         except HTTPException:
             raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def get_initial_call_messages(
+        self,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        try:
+            from models import Message
+            
+            initial_greeting_exists = db.query(Message).filter(
+                Message.user_id == current_user.id,
+                Message.chat_id == 0,
+                Message.sender == "coach"
+            ).first()
+            
+            if not initial_greeting_exists and not current_user.initial_call_completed:
+                initial_message = Message(
+                    content="Hey, I'm glad we get to sit down today. How are you doing right now?",
+                    sender="coach",
+                    user_id=current_user.id,
+                    chat_id=0
+                )
+                db.add(initial_message)
+                db.commit()
+            
+            initial_messages = (
+                db.query(Message)
+                .filter(Message.chat_id == 0, Message.user_id == current_user.id)
+                .order_by(Message.created_at.asc())
+                .all()
+            )
+            
+            messages = [
+                {
+                    "text": message.content,
+                    "sender": message.sender,
+                    "timestamp": message.created_at.isoformat()
+                }
+                for message in initial_messages
+            ]
+            
+            return {"messages": messages}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

@@ -40,10 +40,32 @@ export default function InterviewPending({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    fetchInitialMessages();
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
+
+  const fetchInitialMessages = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/initial-call/messages`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const formattedMessages: Message[] = data.messages.map((msg: any) => ({
+          text: msg.text,
+          sender: msg.sender as "user" | "coach",
+        }));
+        setMessages(formattedMessages);
+      } else if (response.status === 401) {
+        logout();
+      }
+    } catch (error) {
+      showNotification("Failed to load messages", "error");
+    }
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -316,6 +338,17 @@ export default function InterviewPending({
         <div className="initial-call-header">
           <h2>Welcome to Your Personal Coach</h2>
           <p>Let's start with your initial call</p>
+          <button 
+            className="initial-call-logout-button"
+            onClick={logout}
+            title="Log out"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 21H19a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4"></path>
+              <polyline points="8 17 3 12 8 7"></polyline>
+              <line x1="3" y1="12" x2="15" y2="12"></line>
+            </svg>
+          </button>
         </div>
 
         <div className="initial-call-messages-container">

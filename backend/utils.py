@@ -2,7 +2,7 @@ import ast
 import json
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional, Dict, List, Any
 
@@ -188,7 +188,6 @@ class LLMStreamingClient:
             return
 
         from models import UserProfile
-        from datetime import datetime
 
         try:
             profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
@@ -472,7 +471,6 @@ class LLMStreamingClient:
             return
 
         from models import UserProfile
-        from datetime import datetime, timezone
 
         if 'user_profile_key' not in args or 'user_profile_value' not in args:
             return
@@ -722,10 +720,7 @@ class LLMStreamingClient:
             
             return response.text if response.text else ""
                     
-        except Exception as e:
-            print(f"Error in book_discussion_response: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
             raise
 
 
