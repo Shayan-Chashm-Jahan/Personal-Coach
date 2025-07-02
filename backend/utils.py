@@ -369,7 +369,7 @@ class LLMStreamingClient:
             function_declarations = [
                 {
                     "name": "update_user_profile",
-                    "description": "Update the user's profile information or memories during the initial call",
+                    "description": "Update the user's profile information during the initial call",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -379,13 +379,12 @@ class LLMStreamingClient:
                                 "enum": [
                                     "first_name",
                                     "last_name",
-                                    "birth_date",
-                                    "memories"
+                                    "birth_date"
                                 ]
                             },
                             "user_profile_value": {
                                 "type": "string",
-                                "description": "For first_name/last_name: the name value. For birth_date: use YYYY-MM-DD format. For memories: a JSON string of an array containing important information about the user."
+                                "description": "For first_name/last_name: the name value. For birth_date: use YYYY-MM-DD format."
                             }
                         },
                         "required": ["user_profile_key", "user_profile_value"]
@@ -426,9 +425,6 @@ class LLMStreamingClient:
                         text_parts.append(part.text)
 
                 if function_calls_found:
-                    if self._is_profile_complete(user_id, db):
-                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
-
                     contents.append(response.candidates[0].content)
                     contents.append(types.Content(
                         role="user",
@@ -441,19 +437,31 @@ class LLMStreamingClient:
                         config=config
                     )
 
-                    return final_response.text if final_response.text else ""
+                    response_text = final_response.text if final_response.text else ""
+                    if response_text.strip() == "END":
+                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
+                    return response_text
                 elif text_parts:
-                    return " ".join(text_parts)
+                    combined_text = " ".join(text_parts)
+                    if combined_text.strip() == "END":
+                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
+                    return combined_text
 
             try:
-                return response.text if response.text else ""
+                response_text = response.text if response.text else ""
+                if response_text.strip() == "END":
+                    return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
+                return response_text
             except Exception:
                 if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
                     text_parts = []
                     for part in response.candidates[0].content.parts:
                         if hasattr(part, 'text') and part.text:
                             text_parts.append(part.text)
-                    return " ".join(text_parts) if text_parts else ""
+                    combined_text = " ".join(text_parts) if text_parts else ""
+                    if combined_text.strip() == "END":
+                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
+                    return combined_text
                 return ""
 
         except Exception:
@@ -471,31 +479,6 @@ class LLMStreamingClient:
 
         key = args['user_profile_key']
         value = args['user_profile_value']
-
-        if key == 'memories':
-            try:
-                memory_list = self._extract_list_from_response(value)
-                if memory_list:
-                    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-                    if not profile:
-                        profile = UserProfile(user_id=user_id, memories="[]")
-                        db.add(profile)
-                        db.flush()
-                    
-                    existing_memories = json.loads(profile.memories) if profile.memories else []
-                    
-                    for memory_content in memory_list:
-                        if memory_content and str(memory_content).strip():
-                            existing_memories.append({
-                                "content": str(memory_content).strip(),
-                                "timestamp": datetime.now(timezone.utc).isoformat()
-                            })
-                    
-                    profile.memories = json.dumps(existing_memories)
-                    db.commit()
-            except Exception:
-                db.rollback()
-            return
 
         allowed_keys = ['first_name', 'last_name', 'birth_date']
         if key not in allowed_keys:
@@ -522,28 +505,6 @@ class LLMStreamingClient:
             db.rollback()
             raise
 
-    def _is_profile_complete(self, user_id: int, db: Session) -> bool:
-        if not user_id or not db:
-            return False
-
-        from models import UserProfile
-
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-        if not profile:
-            return False
-
-        required_fields = [
-            profile.first_name,
-            profile.last_name,
-            profile.birth_date
-        ]
-
-        basic_info_complete = all(field is not None and str(field).strip() != '' for field in required_fields)
-
-        memories_list = json.loads(profile.memories) if profile.memories else []
-        has_sufficient_memories = len(memories_list) >= 5
-
-        return basic_info_complete and has_sufficient_memories
 
     def search_youtube_videos(self, search_queries: list) -> list:
         import requests

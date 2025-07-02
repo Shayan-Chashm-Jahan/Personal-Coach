@@ -136,8 +136,8 @@ class ChatAPI:
             return await self.update_goal_status(goal_id, status, current_user, db)
 
         @self.app.get("/api/user/status")
-        async def get_user_status_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
-            return await self.get_user_status(current_user, db)
+        async def get_user_status_route(current_user: User = Depends(self.get_current_user)):
+            return await self.get_user_status(current_user)
 
         @self.app.get("/api/chats")
         async def get_chats_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
@@ -287,6 +287,13 @@ class ChatAPI:
             )
             db.add(coach_message)
             db.commit()
+
+            thread = threading.Thread(
+                target=self._extract_memories_background,
+                args=(message, response, history_dict, user_id)
+            )
+            thread.daemon = True
+            thread.start()
 
             yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
@@ -601,8 +608,7 @@ class ChatAPI:
 
     async def get_user_status(
         self,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+        current_user: User = Depends(get_current_user)
     ):
         try:
             return {
