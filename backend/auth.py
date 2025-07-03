@@ -33,5 +33,6 @@ def verify_token(token: str) -> Optional[str]:
     try:
         payload = jwt.decode(token, config_manager.secret_key, algorithms=[ALGORITHM])
         return payload.get("sub")
-    except JWTError:
+    except JWTError as e:
+        print(f"An error occurred: {e}")
         return None

@@ -41,6 +41,7 @@ class ConfigManager:
             self.initial_call_prompt = self._read_prompt_file(prompts_dir / "initial_call_prompt.md")
             self.book_discussion_prompt = self._read_prompt_file(prompts_dir / "book_discussion.md")
         except FileNotFoundError as e:
+            print(f"An error occurred: {e}")
             raise ValueError(f"Failed to load prompt file: {e}")
 
     def _read_prompt_file(self, file_path: Path) -> str:

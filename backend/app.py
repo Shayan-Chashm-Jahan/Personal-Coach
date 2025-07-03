@@ -212,7 +212,8 @@ class ChatAPI:
             if memories:
                 llm_client.save_memories_to_db(memories, user_id, db)
             db.close()
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             pass
 
     def get_current_user(
@@ -254,6 +255,7 @@ class ChatAPI:
 
             yield "data: [DONE]\n\n"
         except Exception as e:
+            print(f"An error occurred: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     def _generate_initial_call_response(
@@ -269,6 +271,7 @@ class ChatAPI:
             yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
+            print(f"An error occurred: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     def _generate_initial_call_response_with_save(
@@ -302,6 +305,7 @@ class ChatAPI:
             yield f"data: {json.dumps({'chunk': response})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
+            print(f"An error occurred: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     async def stream_chat(
@@ -323,6 +327,7 @@ class ChatAPI:
                 }
             )
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=f"Stream chat error: {str(e)}")
 
     async def get_memories(
@@ -347,6 +352,7 @@ class ChatAPI:
             ]
             return {"memories": memories}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def delete_memory(
@@ -372,11 +378,14 @@ class ChatAPI:
             db.commit()
             
             return {"message": "Memory deleted successfully"}
-        except ValueError:
+        except ValueError as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=400, detail="Invalid memory ID")
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def register(
@@ -398,9 +407,11 @@ class ChatAPI:
             access_token = create_access_token(data={"sub": new_user.email})
             return {"access_token": access_token, "token_type": "bearer"}
 
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def login(
@@ -419,9 +430,11 @@ class ChatAPI:
             access_token = create_access_token(data={"sub": user.email})
             return {"access_token": access_token, "token_type": "bearer"}
 
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_messages(
@@ -446,6 +459,7 @@ class ChatAPI:
             ]
             return {"messages": messages}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def save_message(
@@ -487,6 +501,7 @@ class ChatAPI:
             db.refresh(new_message)
             return {"message": "Message saved successfully"}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def clear_messages(
@@ -500,6 +515,7 @@ class ChatAPI:
             db.commit()
             return {"message": f"Successfully deleted {deleted_count} messages"}
         except Exception as e:
+            print(f"An error occurred: {e}")
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -527,6 +543,7 @@ class ChatAPI:
             ]
             return {"goals": goals}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def create_goal(
@@ -553,6 +570,7 @@ class ChatAPI:
                 "createdAt": new_goal.created_at.isoformat()
             }
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def delete_goal(
@@ -573,9 +591,11 @@ class ChatAPI:
             db.delete(goal)
             db.commit()
             return {"message": "Goal deleted successfully"}
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def update_goal_status(
@@ -605,9 +625,11 @@ class ChatAPI:
                 "status": goal.status,
                 "createdAt": goal.created_at.isoformat()
             }
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_user_status(
@@ -619,6 +641,7 @@ class ChatAPI:
                 "initial_call_completed": current_user.initial_call_completed or False
             }
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_chats(
@@ -644,6 +667,7 @@ class ChatAPI:
             ]
             return {"chats": chats}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def create_chat(
@@ -668,6 +692,7 @@ class ChatAPI:
                 "updatedAt": new_chat.updated_at.isoformat()
             }
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def update_chat(
@@ -696,9 +721,11 @@ class ChatAPI:
                 "createdAt": chat.created_at.isoformat(),
                 "updatedAt": chat.updated_at.isoformat()
             }
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def delete_chat(
@@ -719,9 +746,11 @@ class ChatAPI:
             db.delete(chat)
             db.commit()
             return {"message": "Chat deleted successfully"}
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_chat_messages(
@@ -754,9 +783,11 @@ class ChatAPI:
                 for message in chat_messages
             ]
             return {"messages": messages}
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_initial_call_messages(
@@ -801,6 +832,7 @@ class ChatAPI:
             
             return {"messages": messages}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def initial_call_chat(
@@ -840,6 +872,7 @@ class ChatAPI:
                 }
             )
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=f"Initial call chat error: {str(e)}")
 
     def _fetch_book_from_google(self, title: str, author: str) -> Optional[dict]:
@@ -860,7 +893,8 @@ class ChatAPI:
                         "google_description": book.get("description", "")[:500] if book.get("description") else ""
                     }
             return None
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return None
 
     async def initialize_user_profile(
@@ -942,6 +976,7 @@ class ChatAPI:
 
             return {"success": True, "message": "Profile initialization completed"}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=f"Profile initialization error: {str(e)}")
 
     async def generate_title(self, request: TitleGenerateRequest):
@@ -987,7 +1022,8 @@ class ChatAPI:
 
             return {"title": title}
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             words = request.message.split()[:5]
             title = " ".join(words)
             if len(title) > 30:
@@ -1019,6 +1055,7 @@ class ChatAPI:
             ]
             return {"books": books}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_videos(
@@ -1047,6 +1084,7 @@ class ChatAPI:
             ]
             return {"videos": videos}
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def generate_book_summary(self, request: BookSummaryRequest, current_user: User, db: Session):
@@ -1064,7 +1102,8 @@ class ChatAPI:
                 try:
                     chapters = json.loads(book.summary)
                     return {"chapters": chapters}
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    print(f"An error occurred: {e}")
                     pass
 
             chapters = llm_client.generate_book_summary(request.title, request.author)
@@ -1074,7 +1113,8 @@ class ChatAPI:
                 db.commit()
 
             return {"chapters": chapters}
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return {"chapters": []}
 
     async def book_discussion(
@@ -1136,6 +1176,7 @@ class ChatAPI:
             
             return {"response": response}
         except Exception as e:
+            print(f"An error occurred: {e}")
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
     
@@ -1157,9 +1198,11 @@ class ChatAPI:
             chat_history = json.loads(book.chat) if book.chat else []
             
             return {"chat": chat_history}
-        except HTTPException:
+        except HTTPException as e:
+            print(f"An error occurred: {e}")
             raise
         except Exception as e:
+            print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
 

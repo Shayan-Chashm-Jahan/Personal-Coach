@@ -70,7 +70,8 @@ class LLMStreamingClient:
                 self._summary_cache = summary
                 self._summary_cache_time = current_time
                 return summary
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"An error occurred: {e}")
             return None
 
     def _save_conversation_summary(self, summary: str) -> None:
@@ -130,7 +131,8 @@ class LLMStreamingClient:
                 result = [str(item).strip() for item in parsed_list if str(item).strip()]
                 return result
             return []
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return []
 
     def _extract_memories(self, user_message: str, assistant_response: str, history: Optional[List[Dict[str, str]]] = None, user_id: Optional[int] = None, db: Optional[Session] = None) -> List[str]:
@@ -180,7 +182,8 @@ class LLMStreamingClient:
             memories = self._extract_list_from_response(content)
             return memories
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return []
 
     def save_memories_to_db(self, memory_list: List[str], user_id: int, db: Session) -> None:
@@ -207,7 +210,8 @@ class LLMStreamingClient:
                     birth_date_str = memory_content.replace("BIRTH_DATE: ", "").strip()
                     try:
                         profile.birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
-                    except ValueError:
+                    except ValueError as e:
+                        print(f"An error occurred: {e}")
                         pass
                 else:
                     existing_memories.append({
@@ -217,7 +221,8 @@ class LLMStreamingClient:
             
             profile.memories = json.dumps(existing_memories)
             db.commit()
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             db.rollback()
             raise
 
@@ -239,7 +244,8 @@ class LLMStreamingClient:
 
             context_parts.append("=== END GOALS ===")
             return "\n".join(context_parts)
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return None
 
     def _build_memories_context(self, user_id: int, db: Session) -> Optional[str]:
@@ -262,7 +268,8 @@ class LLMStreamingClient:
 
             context_parts.append("=== END COACH NOTES ===")
             return "\n".join(context_parts)
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return None
 
     def _build_system_instruction(
@@ -354,7 +361,8 @@ class LLMStreamingClient:
                 if chunk.text:
                     yield chunk.text
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             raise
 
     def initial_call_response(
@@ -391,7 +399,8 @@ class LLMStreamingClient:
                 return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
             return response_text
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             raise
 
 
@@ -441,7 +450,8 @@ class LLMStreamingClient:
                         pass
                 else:
                     pass
-            except Exception:
+            except Exception as e:
+                print(f"An error occurred: {e}")
                 continue
         
         return youtube_videos
@@ -501,7 +511,8 @@ class LLMStreamingClient:
             
             return result
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return {"books": [], "videos": []}
 
 
@@ -550,7 +561,8 @@ class LLMStreamingClient:
             else:
                 return []
 
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             return []
 
 
@@ -612,7 +624,8 @@ class LLMStreamingClient:
             
             return response.text if response.text else ""
                     
-        except Exception:
+        except Exception as e:
+            print(f"An error occurred: {e}")
             raise
 
 
