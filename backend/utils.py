@@ -2,7 +2,7 @@ import ast
 import json
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Dict, List, Any
 
@@ -199,10 +199,21 @@ class LLMStreamingClient:
             existing_memories = json.loads(profile.memories) if profile.memories else []
             
             for memory_content in memory_list:
-                existing_memories.append({
-                    "content": memory_content,
-                    "timestamp": datetime.now().isoformat()
-                })
+                if memory_content.startswith("FIRST_NAME: "):
+                    profile.first_name = memory_content.replace("FIRST_NAME: ", "").strip()
+                elif memory_content.startswith("LAST_NAME: "):
+                    profile.last_name = memory_content.replace("LAST_NAME: ", "").strip()
+                elif memory_content.startswith("BIRTH_DATE: "):
+                    birth_date_str = memory_content.replace("BIRTH_DATE: ", "").strip()
+                    try:
+                        profile.birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        pass
+                else:
+                    existing_memories.append({
+                        "content": memory_content,
+                        "timestamp": datetime.now().isoformat()
+                    })
             
             profile.memories = json.dumps(existing_memories)
             db.commit()
@@ -365,143 +376,24 @@ class LLMStreamingClient:
                     parts=[types.Part.from_text(text=prompt)]
                 )
                 contents.insert(0, system_content)
-            function_declarations = [
-                {
-                    "name": "update_user_profile",
-                    "description": "Update the user's profile information during the initial call",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "user_profile_key": {
-                                "type": "string",
-                                "description": "The profile attribute to update",
-                                "enum": [
-                                    "first_name",
-                                    "last_name",
-                                    "birth_date"
-                                ]
-                            },
-                            "user_profile_value": {
-                                "type": "string",
-                                "description": "For first_name/last_name: the name value. For birth_date: use YYYY-MM-DD format."
-                            }
-                        },
-                        "required": ["user_profile_key", "user_profile_value"]
-                    }
-                }
-            ]
-
-            tools = types.Tool(function_declarations=function_declarations)
-            config = types.GenerateContentConfig(tools=[tools])
-
+            
             response = client.models.generate_content(
                 model=config_manager.model_pro,
                 contents=contents,
-                config=config,
+                config={
+                    "tools": [{"googleSearch": {}}],
+                    "temperature": config_manager.temperature
+                }
             )
 
-            if (response.candidates and
-                response.candidates[0].content and
-                response.candidates[0].content.parts):
-
-                function_calls_found = False
-                function_response_parts = []
-                text_parts = []
-
-                for part in response.candidates[0].content.parts:
-                    if hasattr(part, 'function_call') and part.function_call:
-                        function_calls_found = True
-                        function_call = part.function_call
-                        if function_call.name == "update_user_profile":
-                            self._handle_update_user_profile(dict(function_call.args), user_id, db)
-
-                            function_response_part = types.Part.from_function_response(
-                                name=function_call.name,
-                                response={"success": True}
-                            )
-                            function_response_parts.append(function_response_part)
-                    elif hasattr(part, 'text') and part.text:
-                        text_parts.append(part.text)
-
-                if function_calls_found:
-                    contents.append(response.candidates[0].content)
-                    contents.append(types.Content(
-                        role="user",
-                        parts=function_response_parts
-                    ))
-
-                    final_response = client.models.generate_content(
-                        model=config_manager.model_pro,
-                        contents=contents,
-                        config=config
-                    )
-
-                    response_text = final_response.text if final_response.text else ""
-                    if response_text.strip() == "END":
-                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
-                    return response_text
-                elif text_parts:
-                    combined_text = " ".join(text_parts)
-                    if combined_text.strip() == "END":
-                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
-                    return combined_text
-
-            try:
-                response_text = response.text if response.text else ""
-                if response_text.strip() == "END":
-                    return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
-                return response_text
-            except Exception:
-                if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-                    text_parts = []
-                    for part in response.candidates[0].content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            text_parts.append(part.text)
-                    combined_text = " ".join(text_parts) if text_parts else ""
-                    if combined_text.strip() == "END":
-                        return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
-                    return combined_text
-                return ""
+            response_text = response.text if response and response.text else ""
+            if response_text.strip() == "END":
+                return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
+            return response_text
 
         except Exception:
             raise
 
-    def _handle_update_user_profile(self, args: dict, user_id: int, db: Session):
-        if not user_id or not db:
-            return
-
-        from models import UserProfile
-
-        if 'user_profile_key' not in args or 'user_profile_value' not in args:
-            return
-
-        key = args['user_profile_key']
-        value = args['user_profile_value']
-
-        allowed_keys = ['first_name', 'last_name', 'birth_date']
-        if key not in allowed_keys:
-            return
-
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-        if not profile:
-            profile = UserProfile(user_id=user_id)
-            db.add(profile)
-
-        if key == 'birth_date':
-            try:
-                setattr(profile, key, datetime.strptime(value, '%Y-%m-%d').date())
-            except ValueError:
-                return
-        else:
-            setattr(profile, key, value)
-
-        profile.updated_at = datetime.now(timezone.utc)
-
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
 
 
     def search_youtube_videos(self, search_queries: list) -> list:
