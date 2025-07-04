@@ -30,6 +30,23 @@ interface ValidatedBook extends Book {
   bookUrl: string | null
 }
 
+interface MaterialFeedback {
+  id: number
+  rating: number
+  review: string | null
+  completed: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface FeedbackModal {
+  isOpen: boolean
+  materialType: 'book' | 'video'
+  materialId: string
+  materialTitle: string
+  existingFeedback?: MaterialFeedback | null
+}
+
 export default function Material() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -48,6 +65,19 @@ export default function Material() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(true)
+  const [feedbacks, setFeedbacks] = useState<Record<string, MaterialFeedback>>({})
+  const [feedbackModal, setFeedbackModal] = useState<FeedbackModal>({
+    isOpen: false,
+    materialType: 'video',
+    materialId: '',
+    materialTitle: '',
+    existingFeedback: null
+  })
+  const [feedbackFormData, setFeedbackFormData] = useState({
+    rating: 0,
+    review: ''
+  })
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
   const chatMessagesEndRef = useRef<HTMLDivElement>(null)
   const chatTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -410,6 +440,127 @@ export default function Material() {
     }
   }
 
+  const fetchFeedback = async (materialType: 'book' | 'video', materialId: string) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) return null
+
+      const response = await fetch(`/api/feedback/${materialType}/${materialId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        return data.feedback
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error)
+    }
+    return null
+  }
+
+  const fetchAllFeedbacks = async (books: Book[], videos: Video[]) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) return
+
+      const feedbackPromises = [
+        ...books.map(book => fetchFeedback('book', book.id)),
+        ...videos.map(video => fetchFeedback('video', video.id))
+      ]
+
+      const feedbackResults = await Promise.all(feedbackPromises)
+      const newFeedbacks: Record<string, MaterialFeedback> = {}
+
+      books.forEach((book, index) => {
+        if (feedbackResults[index]) {
+          newFeedbacks[`book-${book.id}`] = feedbackResults[index]
+        }
+      })
+
+      videos.forEach((video, index) => {
+        const feedbackIndex = books.length + index
+        if (feedbackResults[feedbackIndex]) {
+          newFeedbacks[`video-${video.id}`] = feedbackResults[feedbackIndex]
+        }
+      })
+
+      setFeedbacks(newFeedbacks)
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error)
+    }
+  }
+
+  const submitFeedback = async () => {
+    if (feedbackLoading || feedbackFormData.rating === 0) return
+
+    setFeedbackLoading(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) return
+
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          material_type: feedbackModal.materialType,
+          material_id: parseInt(feedbackModal.materialId),
+          rating: feedbackFormData.rating,
+          review: feedbackFormData.review || null,
+          completed: true
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const feedbackKey = `${feedbackModal.materialType}-${feedbackModal.materialId}`
+        setFeedbacks(prev => ({
+          ...prev,
+          [feedbackKey]: data.feedback
+        }))
+        
+        // Close modal and reset form
+        setFeedbackModal({
+          isOpen: false,
+          materialType: 'video',
+          materialId: '',
+          materialTitle: '',
+          existingFeedback: null
+        })
+        setFeedbackFormData({ rating: 0, review: '' })
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error)
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }
+
+  const openFeedbackModal = (materialType: 'book' | 'video', materialId: string, materialTitle: string) => {
+    const feedbackKey = `${materialType}-${materialId}`
+    const existingFeedback = feedbacks[feedbackKey] || null
+
+    setFeedbackModal({
+      isOpen: true,
+      materialType,
+      materialId,
+      materialTitle,
+      existingFeedback
+    })
+
+    if (existingFeedback) {
+      setFeedbackFormData({
+        rating: existingFeedback.rating,
+        review: existingFeedback.review || ''
+      })
+    } else {
+      setFeedbackFormData({ rating: 0, review: '' })
+    }
+  }
+
   const fetchMaterials = async () => {
     try {
       const token = localStorage.getItem('auth_token')
@@ -427,6 +578,10 @@ export default function Material() {
       if (booksResponse.ok && videosResponse.ok) {
         const booksData = await booksResponse.json()
         const videosData = await videosResponse.json()
+        
+        // Fetch feedbacks for all materials
+        await fetchAllFeedbacks(booksData.books, videosData.videos)
+        
         await Promise.all([
           validateBooks(booksData.books),
           validateVideos(videosData.videos)
@@ -525,6 +680,13 @@ export default function Material() {
                       >
                         Discuss
                       </button>
+                      <button
+                        className={`feedback-button ${feedbacks[`book-${book.id}`] ? 'has-feedback' : ''}`}
+                        onClick={() => openFeedbackModal('book', book.id, book.googleTitle || book.title)}
+                        title={feedbacks[`book-${book.id}`] ? 'Update feedback' : 'Mark as read & give feedback'}
+                      >
+                        {feedbacks[`book-${book.id}`] ? '✓ Read' : 'Mark as Read'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -558,14 +720,23 @@ export default function Material() {
                   <div className="video-content">
                     <h3 className="material-title">{video.youtubeTitle}</h3>
                     <p className="material-description">{video.description}</p>
-                    <a
-                      href={video.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="material-link"
-                    >
-                      Watch Video
-                    </a>
+                    <div className="video-actions">
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="material-link"
+                      >
+                        Watch Video
+                      </a>
+                      <button
+                        className={`feedback-button ${feedbacks[`video-${video.id}`] ? 'has-feedback' : ''}`}
+                        onClick={() => openFeedbackModal('video', video.id, video.youtubeTitle)}
+                        title={feedbacks[`video-${video.id}`] ? 'Update feedback' : 'Mark as watched & give feedback'}
+                      >
+                        {feedbacks[`video-${video.id}`] ? '✓ Watched' : 'Mark as Watched'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -724,6 +895,121 @@ export default function Material() {
                 </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {feedbackModal.isOpen && (
+        <div className="feedback-modal-overlay" onClick={() => {
+          setFeedbackModal({
+            isOpen: false,
+            materialType: 'video',
+            materialId: '',
+            materialTitle: '',
+            existingFeedback: null
+          })
+          setFeedbackFormData({ rating: 0, review: '' })
+        }}>
+          <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="feedback-modal-close"
+              onClick={() => {
+                setFeedbackModal({
+                  isOpen: false,
+                  materialType: 'video',
+                  materialId: '',
+                  materialTitle: '',
+                  existingFeedback: null
+                })
+                setFeedbackFormData({ rating: 0, review: '' })
+              }}
+            >
+              ×
+            </button>
+            <h2 className="feedback-modal-title">
+              {feedbackModal.existingFeedback ? 'Update Your Feedback' : 'Give Your Feedback'}
+            </h2>
+            <p className="feedback-modal-subtitle">{feedbackModal.materialTitle}</p>
+            
+            <div className="feedback-rating">
+              <p className="feedback-label">How did you like this {feedbackModal.materialType}?</p>
+              <div className="rating-buttons">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    className={`rating-button ${feedbackFormData.rating === rating ? 'selected' : ''}`}
+                    onClick={() => setFeedbackFormData(prev => ({ ...prev, rating }))}
+                  >
+                    <svg className="rating-icon" viewBox="0 0 24 24" fill="currentColor">
+                      {rating === 1 && (
+                        <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 3.5c-1.83 0-3.38.97-4.26 2.4-.16.26.04.6.35.6h7.82c.31 0 .51-.34.35-.6-.88-1.43-2.43-2.4-4.26-2.4z"/>
+                      )}
+                      {rating === 2 && (
+                        <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 4c-1.19 0-2.21.51-2.81 1.3-.11.15.02.3.21.3h5.2c.19 0 .32-.15.21-.3-.6-.79-1.62-1.3-2.81-1.3z"/>
+                      )}
+                      {rating === 3 && (
+                        <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 4h8v1.5h-8z"/>
+                      )}
+                      {rating === 4 && (
+                        <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.03 0 3.8-1.11 4.75-2.75.19-.33-.05-.75-.44-.75H7.69c-.38 0-.63.42-.44.75.95 1.64 2.72 2.75 4.75 2.75z"/>
+                      )}
+                      {rating === 5 && (
+                        <>
+                          <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                          <path d="M8.5 7.5l.75 1.55L11 9.5l-1.25.45L8.5 11.5l-.75-1.55L6 9.5l1.75-.45z"/>
+                          <path d="M15.5 7.5l.75 1.55L18 9.5l-1.75.45-.75 1.55-.75-1.55L13 9.5l1.75-.45z"/>
+                          <path d="M12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                        </>
+                      )}
+                    </svg>
+                    <span className="rating-label">
+                      {rating === 1 && 'Poor'}
+                      {rating === 2 && 'Fair'}
+                      {rating === 3 && 'Good'}
+                      {rating === 4 && 'Very Good'}
+                      {rating === 5 && 'Excellent'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="feedback-review">
+              <label htmlFor="review" className="feedback-label">Your review (optional)</label>
+              <textarea
+                id="review"
+                className="feedback-textarea"
+                placeholder={`Share your thoughts about this ${feedbackModal.materialType}...`}
+                value={feedbackFormData.review}
+                onChange={(e) => setFeedbackFormData(prev => ({ ...prev, review: e.target.value }))}
+                rows={4}
+              />
+            </div>
+            
+            <div className="feedback-actions">
+              <button
+                className="feedback-cancel"
+                onClick={() => {
+                  setFeedbackModal({
+                    isOpen: false,
+                    materialType: 'video',
+                    materialId: '',
+                    materialTitle: '',
+                    existingFeedback: null
+                  })
+                  setFeedbackFormData({ rating: 0, review: '' })
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="feedback-submit"
+                onClick={submitFeedback}
+                disabled={feedbackFormData.rating === 0 || feedbackLoading}
+              >
+                {feedbackLoading ? 'Submitting...' : feedbackModal.existingFeedback ? 'Update Feedback' : 'Submit Feedback'}
+              </button>
             </div>
           </div>
         </div>

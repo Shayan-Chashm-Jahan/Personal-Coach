@@ -456,7 +456,7 @@ class LLMStreamingClient:
         
         return youtube_videos
 
-    def find_recommendations(self, conversation_text: str) -> dict:
+    def find_recommendations(self, conversation_text: str, user_feedback: str = "") -> dict:
         try:
             client = self._get_client()
 
@@ -465,7 +465,10 @@ class LLMStreamingClient:
             with open(prompt_path, 'r') as f:
                 prompt_template = f.read()
 
-            prompt = prompt_template.format(conversation_text=conversation_text)
+            prompt = prompt_template.format(
+                conversation_text=conversation_text,
+                user_feedback=user_feedback if user_feedback else "No previous feedback available."
+            )
 
             response = client.models.generate_content(
                 model=config_manager.model_pro,

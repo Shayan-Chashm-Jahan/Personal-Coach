@@ -23,6 +23,7 @@ class User(Base):
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     books = relationship("Book", back_populates="user", cascade="all, delete-orphan")
     videos = relationship("Video", back_populates="user", cascade="all, delete-orphan")
+    material_feedbacks = relationship("MaterialFeedback", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserProfile(Base):
@@ -94,6 +95,7 @@ class Book(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="books")
+    feedbacks = relationship("MaterialFeedback", back_populates="book", cascade="all, delete-orphan")
 
 
 class Video(Base):
@@ -108,6 +110,27 @@ class Video(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="videos")
+    feedbacks = relationship("MaterialFeedback", back_populates="video", cascade="all, delete-orphan")
+
+
+class MaterialFeedback(Base):
+    __tablename__ = "material_feedbacks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_type = Column(String(20), nullable=False)  # 'book' or 'video'
+    rating = Column(Integer, nullable=False)  # 1-5
+    review = Column(Text, nullable=True)
+    completed = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=True)
+    video_id = Column(Integer, ForeignKey("videos.id"), nullable=True)
+    
+    user = relationship("User", back_populates="material_feedbacks")
+    book = relationship("Book", back_populates="feedbacks")
+    video = relationship("Video", back_populates="feedbacks")
 
 
 DATABASE_URL = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'app.db')}"

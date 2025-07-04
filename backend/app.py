@@ -64,6 +64,18 @@ class BookDiscussionRequest(BaseModel):
     chapters: List[dict]
     history: List[HistoryItem] = []
 
+class MaterialFeedbackCreate(BaseModel):
+    material_type: str  # 'book' or 'video'
+    material_id: int
+    rating: int  # 1-5
+    review: Optional[str] = None
+    completed: bool = True
+
+class MaterialFeedbackUpdate(BaseModel):
+    rating: Optional[int] = None
+    review: Optional[str] = None
+    completed: Optional[bool] = None
+
 
 security = HTTPBearer()
 
@@ -194,6 +206,22 @@ class ChatAPI:
         @self.app.get("/api/books/{book_id}/chat")
         async def get_book_chat_route(book_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.get_book_chat(book_id, current_user, db)
+
+        @self.app.post("/api/feedback")
+        async def create_feedback_route(feedback: MaterialFeedbackCreate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.create_feedback(feedback, current_user, db)
+
+        @self.app.get("/api/feedback/{material_type}/{material_id}")
+        async def get_feedback_route(material_type: str, material_id: int, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_feedback(material_type, material_id, current_user, db)
+
+        @self.app.put("/api/feedback/{feedback_id}")
+        async def update_feedback_route(feedback_id: int, feedback_update: MaterialFeedbackUpdate, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.update_feedback(feedback_id, feedback_update, current_user, db)
+
+        @self.app.get("/api/user/feedbacks")
+        async def get_user_feedbacks_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
+            return await self.get_user_feedbacks(current_user, db)
 
     def _validate_request(self, request: ChatRequest) -> None:
         if not request.message.strip():
@@ -917,7 +945,29 @@ class ChatAPI:
                 conversation_text += f"{role}: {msg.content}\n"
 
             if conversation_text.strip():
-                recommendations = llm_client.find_recommendations(conversation_text)
+                # Get user's previous feedback
+                from models import MaterialFeedback
+                feedbacks = db.query(MaterialFeedback).filter(
+                    MaterialFeedback.user_id == current_user.id
+                ).order_by(MaterialFeedback.rating.desc()).all()
+                
+                feedback_text = ""
+                if feedbacks:
+                    feedback_text = "Previous material feedback:\n"
+                    for fb in feedbacks:
+                        material_type = fb.material_type.capitalize()
+                        material_title = ""
+                        if fb.material_type == "book" and fb.book:
+                            material_title = f"{fb.book.title} by {fb.book.author}"
+                        elif fb.material_type == "video" and fb.video:
+                            material_title = fb.video.title
+                        
+                        feedback_text += f"\n{material_type}: {material_title}\n"
+                        feedback_text += f"Rating: {fb.rating}/5 stars\n"
+                        if fb.review:
+                            feedback_text += f"Review: {fb.review}\n"
+                
+                recommendations = llm_client.find_recommendations(conversation_text, feedback_text)
 
                 seen_books = set()
 
@@ -1201,6 +1251,220 @@ class ChatAPI:
         except HTTPException as e:
             print(f"An error occurred: {e}")
             raise
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def create_feedback(
+        self,
+        feedback: MaterialFeedbackCreate,
+        current_user: User,
+        db: Session
+    ):
+        try:
+            from models import MaterialFeedback, Book, Video
+            
+            # Validate material exists and belongs to user
+            if feedback.material_type == "book":
+                material = db.query(Book).filter(
+                    Book.id == feedback.material_id,
+                    Book.user_id == current_user.id
+                ).first()
+                if not material:
+                    raise HTTPException(status_code=404, detail="Book not found")
+            elif feedback.material_type == "video":
+                material = db.query(Video).filter(
+                    Video.id == feedback.material_id,
+                    Video.user_id == current_user.id
+                ).first()
+                if not material:
+                    raise HTTPException(status_code=404, detail="Video not found")
+            else:
+                raise HTTPException(status_code=400, detail="Invalid material type")
+            
+            # Check if feedback already exists
+            existing = db.query(MaterialFeedback).filter(
+                MaterialFeedback.user_id == current_user.id,
+                MaterialFeedback.material_type == feedback.material_type
+            )
+            if feedback.material_type == "book":
+                existing = existing.filter(MaterialFeedback.book_id == feedback.material_id)
+            else:
+                existing = existing.filter(MaterialFeedback.video_id == feedback.material_id)
+            existing = existing.first()
+            
+            if existing:
+                # Update existing feedback
+                existing.rating = feedback.rating
+                existing.review = feedback.review
+                existing.completed = feedback.completed
+                existing.updated_at = datetime.now(timezone.utc)
+                db.commit()
+                db.refresh(existing)
+                return {"feedback": {
+                    "id": existing.id,
+                    "rating": existing.rating,
+                    "review": existing.review,
+                    "completed": existing.completed,
+                    "created_at": existing.created_at.isoformat(),
+                    "updated_at": existing.updated_at.isoformat()
+                }}
+            
+            # Create new feedback
+            new_feedback = MaterialFeedback(
+                user_id=current_user.id,
+                material_type=feedback.material_type,
+                rating=feedback.rating,
+                review=feedback.review,
+                completed=feedback.completed,
+                book_id=feedback.material_id if feedback.material_type == "book" else None,
+                video_id=feedback.material_id if feedback.material_type == "video" else None
+            )
+            
+            db.add(new_feedback)
+            db.commit()
+            db.refresh(new_feedback)
+            
+            return {"feedback": {
+                "id": new_feedback.id,
+                "rating": new_feedback.rating,
+                "review": new_feedback.review,
+                "completed": new_feedback.completed,
+                "created_at": new_feedback.created_at.isoformat(),
+                "updated_at": new_feedback.updated_at.isoformat()
+            }}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_feedback(
+        self,
+        material_type: str,
+        material_id: int,
+        current_user: User,
+        db: Session
+    ):
+        try:
+            from models import MaterialFeedback
+            
+            query = db.query(MaterialFeedback).filter(
+                MaterialFeedback.user_id == current_user.id,
+                MaterialFeedback.material_type == material_type
+            )
+            
+            if material_type == "book":
+                query = query.filter(MaterialFeedback.book_id == material_id)
+            elif material_type == "video":
+                query = query.filter(MaterialFeedback.video_id == material_id)
+            else:
+                raise HTTPException(status_code=400, detail="Invalid material type")
+            
+            feedback = query.first()
+            
+            if not feedback:
+                return {"feedback": None}
+            
+            return {"feedback": {
+                "id": feedback.id,
+                "rating": feedback.rating,
+                "review": feedback.review,
+                "completed": feedback.completed,
+                "created_at": feedback.created_at.isoformat(),
+                "updated_at": feedback.updated_at.isoformat()
+            }}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def update_feedback(
+        self,
+        feedback_id: int,
+        feedback_update: MaterialFeedbackUpdate,
+        current_user: User,
+        db: Session
+    ):
+        try:
+            from models import MaterialFeedback
+            
+            feedback = db.query(MaterialFeedback).filter(
+                MaterialFeedback.id == feedback_id,
+                MaterialFeedback.user_id == current_user.id
+            ).first()
+            
+            if not feedback:
+                raise HTTPException(status_code=404, detail="Feedback not found")
+            
+            if feedback_update.rating is not None:
+                feedback.rating = feedback_update.rating
+            if feedback_update.review is not None:
+                feedback.review = feedback_update.review
+            if feedback_update.completed is not None:
+                feedback.completed = feedback_update.completed
+            
+            feedback.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(feedback)
+            
+            return {"feedback": {
+                "id": feedback.id,
+                "rating": feedback.rating,
+                "review": feedback.review,
+                "completed": feedback.completed,
+                "created_at": feedback.created_at.isoformat(),
+                "updated_at": feedback.updated_at.isoformat()
+            }}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_user_feedbacks(
+        self,
+        current_user: User,
+        db: Session
+    ):
+        try:
+            from models import MaterialFeedback, Book, Video
+            
+            feedbacks = db.query(MaterialFeedback).filter(
+                MaterialFeedback.user_id == current_user.id
+            ).order_by(MaterialFeedback.updated_at.desc()).all()
+            
+            result = []
+            for feedback in feedbacks:
+                item = {
+                    "id": feedback.id,
+                    "material_type": feedback.material_type,
+                    "rating": feedback.rating,
+                    "review": feedback.review,
+                    "completed": feedback.completed,
+                    "created_at": feedback.created_at.isoformat(),
+                    "updated_at": feedback.updated_at.isoformat()
+                }
+                
+                if feedback.material_type == "book" and feedback.book:
+                    item["material"] = {
+                        "id": feedback.book.id,
+                        "title": feedback.book.title,
+                        "author": feedback.book.author
+                    }
+                elif feedback.material_type == "video" and feedback.video:
+                    item["material"] = {
+                        "id": feedback.video.id,
+                        "title": feedback.video.title,
+                        "url": feedback.video.url
+                    }
+                
+                result.append(item)
+            
+            return {"feedbacks": result}
         except Exception as e:
             print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=str(e))
