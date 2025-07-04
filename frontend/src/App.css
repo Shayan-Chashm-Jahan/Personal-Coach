@@ -1518,19 +1518,56 @@ html, body {
   align-items: stretch;
 }
 
+.book-actions > * {
+  flex: 1;
+  text-align: center;
+}
+
 .book-actions .material-link {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 12px 16px;
+  text-decoration: none;
+  background: #2d3748;
+  color: white;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
   margin-top: 0;
-  min-height: 36px;
+  white-space: nowrap;
 }
 
-.discuss-book-button {
-  border: none;
+.book-actions .material-link:hover {
+  background: #1a202c;
+  border-color: #1a202c;
+  transform: translateY(-1px);
+}
+
+.book-actions .discuss-book-button {
+  padding: 12px 16px;
+  background: #2d3748;
+  color: white;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
+}
+
+.book-actions .discuss-book-button:hover {
+  background: #1a202c;
+  border-color: #1a202c;
+  transform: translateY(-1px);
+}
   margin: 0;
   outline: none;
 }
@@ -2032,12 +2069,41 @@ html, body {
 .video-actions {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
   margin-top: 16px;
 }
 
+.video-actions > * {
+  flex: 1;
+}
+
+.video-actions .material-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  text-decoration: none;
+  background: #2d3748;
+  color: white;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-top: 0;
+  line-height: normal;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.video-actions .material-link:hover {
+  background: #1a202c;
+  border-color: #1a202c;
+  transform: translateY(-1px);
+}
+
 .feedback-button {
-  padding: 8px 16px;
+  padding: 12px 16px;
   background: #f7fafc;
   color: #4a5568;
   border: 1px solid #e2e8f0;
@@ -2047,6 +2113,10 @@ html, body {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .feedback-button:hover {
