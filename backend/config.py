@@ -26,7 +26,7 @@ class ConfigManager:
         self.secret_key = os.getenv("SECRET_KEY")
         if not self.secret_key:
             raise ValueError("SECRET_KEY environment variable is required for security")
-        self.access_token_expire_minutes = 30
+        self.access_token_expire_minutes = 30 * 24 * 60  # 30 days
 
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
 
