@@ -277,22 +277,46 @@ class LLMStreamingClient:
         user_id: Optional[int] = None,
         db: Optional[Session] = None
     ) -> str:
-        system_parts = [config_manager.system_prompt]
-
+        user_info = ""
+        goals = ""
+        memories = ""
+        conversation_summary = ""
+        
         if user_id and db:
+            from models import UserProfile
+            profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+            
+            if profile:
+                user_info_parts = []
+                if profile.first_name or profile.last_name:
+                    full_name = f"{profile.first_name or ''} {profile.last_name or ''}".strip()
+                    user_info_parts.append(f"User's name: {full_name}")
+                
+                if profile.birth_date:
+                    user_info_parts.append(f"Birthday: {profile.birth_date.strftime('%B %d, %Y')}")
+                
+                if user_info_parts:
+                    user_info = "=== USER INFORMATION ===\n" + "\n".join(user_info_parts) + "\n=== END USER INFORMATION ==="
+            
             goals_context = self._build_goals_context(user_id, db)
             if goals_context:
-                system_parts.append(goals_context)
-
+                goals = goals_context
+            
             memories_context = self._build_memories_context(user_id, db)
             if memories_context:
-                system_parts.append(memories_context)
-
+                memories = memories_context
+        
         existing_summary = self._load_conversation_summary()
         if existing_summary:
-            system_parts.append(f"Previous conversation summary: {existing_summary}")
-
-        return "\n\n".join(system_parts)
+            conversation_summary = f"=== PREVIOUS CONVERSATION SUMMARY ===\n{existing_summary}\n=== END SUMMARY ==="
+        
+        system_prompt = config_manager.system_prompt
+        system_prompt = system_prompt.replace("{user_info}", user_info)
+        system_prompt = system_prompt.replace("{goals}", goals)
+        system_prompt = system_prompt.replace("{memories}", memories)
+        system_prompt = system_prompt.replace("{conversation_summary}", conversation_summary)
+        
+        return system_prompt
 
     def _build_conversation_context(self, history: Optional[List[Dict[str, str]]]) -> tuple[List[Dict[str, str]], Optional[str]]:
         if not history:

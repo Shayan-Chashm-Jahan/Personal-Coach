@@ -406,25 +406,19 @@ class ChatAPI:
         db: Session
     ):
         try:
-            # Parse history from JSON string
             history_list = json.loads(history) if history else []
-            history_dict = self._convert_history_to_dict(history_list)
+            history_dict = history_list
             
-            # Process uploaded files
             file_data = []
             if files:
                 for file in files:
                     if file and file.filename:
-                        # Read file content
                         content = await file.read()
                         
-                        # Determine mime type
                         mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
                         
-                        # Convert to base64
                         base64_data = base64.b64encode(content).decode('utf-8')
                         
-                        # Create inline data for Gemini
                         file_data.append({
                             "inline_data": {
                                 "mime_type": mime_type,
@@ -598,7 +592,12 @@ class ChatAPI:
             ).order_by(Message.created_at.desc()).first()
 
             if existing_message:
-                time_diff = datetime.now(timezone.utc) - existing_message.created_at
+                current_time = datetime.now(timezone.utc)
+                message_time = existing_message.created_at
+                if message_time.tzinfo is None:
+                    message_time = message_time.replace(tzinfo=timezone.utc)
+                
+                time_diff = current_time - message_time
                 if time_diff < timedelta(minutes=1):
                     return {"message": "Duplicate message not saved"}
 
