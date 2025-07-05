@@ -3,12 +3,14 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import List, Iterator, Optional, Dict
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
+import base64
+import mimetypes
 
 from auth import get_password_hash, verify_password, create_access_token, verify_token
 from config import config_manager
@@ -110,6 +112,17 @@ class ChatAPI:
         @self.app.post("/api/chat/stream")
         async def stream_chat_route(request: ChatRequest, current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
             return await self.stream_chat(request, current_user, db)
+        
+        @self.app.post("/api/chat/stream-multimodal")
+        async def stream_chat_multimodal_route(
+            message: str = Form(...),
+            chat_id: int = Form(...),
+            history: str = Form("[]"),
+            files: List[UploadFile] = File(None),
+            current_user: User = Depends(self.get_current_user),
+            db: Session = Depends(get_db)
+        ):
+            return await self.stream_chat_multimodal(message, chat_id, history, files, current_user, db)
 
         @self.app.get("/api/memories")
         async def get_memories_route(current_user: User = Depends(self.get_current_user), db: Session = Depends(get_db)):
@@ -285,6 +298,31 @@ class ChatAPI:
         except Exception as e:
             print(f"An error occurred: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    def _generate_stream_multimodal(
+        self,
+        message: str,
+        history_dict: List[dict],
+        file_data: List[dict],
+        user: User,
+        db: Session
+    ) -> Iterator[str]:
+        try:
+            full_response = ""
+
+            for chunk in stream_chat_response(message, history_dict, user.id, db, file_data):
+                full_response += chunk
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+
+            if full_response.strip():
+                memories = llm_client._extract_memories(message, full_response, history_dict, user.id, db)
+                if memories:
+                    llm_client.save_memories_to_db(memories, user.id, db)
+
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     def _generate_initial_call_response(
         self,
@@ -357,6 +395,54 @@ class ChatAPI:
         except Exception as e:
             print(f"An error occurred: {e}")
             raise HTTPException(status_code=500, detail=f"Stream chat error: {str(e)}")
+    
+    async def stream_chat_multimodal(
+        self,
+        message: str,
+        chat_id: int,
+        history: str,
+        files: List[UploadFile],
+        current_user: User,
+        db: Session
+    ):
+        try:
+            # Parse history from JSON string
+            history_list = json.loads(history) if history else []
+            history_dict = self._convert_history_to_dict(history_list)
+            
+            # Process uploaded files
+            file_data = []
+            if files:
+                for file in files:
+                    if file and file.filename:
+                        # Read file content
+                        content = await file.read()
+                        
+                        # Determine mime type
+                        mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+                        
+                        # Convert to base64
+                        base64_data = base64.b64encode(content).decode('utf-8')
+                        
+                        # Create inline data for Gemini
+                        file_data.append({
+                            "inline_data": {
+                                "mime_type": mime_type,
+                                "data": base64_data
+                            }
+                        })
+            
+            return StreamingResponse(
+                self._generate_stream_multimodal(message, history_dict, file_data, current_user, db),
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive"
+                }
+            )
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise HTTPException(status_code=500, detail=f"Stream chat multimodal error: {str(e)}")
 
     async def get_memories(
         self,

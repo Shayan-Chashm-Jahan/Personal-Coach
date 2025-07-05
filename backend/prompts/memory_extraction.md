@@ -8,7 +8,7 @@ If there's nothing significant to extract, return exactly: NONE
 
 If there are important insights, return them as a Python list of strings. Each entry must be ONE single fact.
 
-From the previous messages, we have already extracted data. Also, from the coach's messages, we don't extract things. We only extract things from what the user says. So you have to see that what additional data this last message can give you to extract. Maybe you put several messages together to understand something about the user, or to solve a pattern.
+From the previous messages, we have already extracted data. Also, from the coach's messages, we will extract information if and only if the coach has extracted it from valid resources, for example by searching. We mainly extract things from what the user says. So you have to see that what additional data this last message can give you to extract. Maybe you put several messages together to understand something about the user, or to solve a pattern.
 
 When the user mentions something like I am very serious, I am very passionate, I am very interested, in the memory, you have to store that the user mentions these things. We don't store that the user really is that. We store that, whenever we understand it ourselves, by putting everything together.
 

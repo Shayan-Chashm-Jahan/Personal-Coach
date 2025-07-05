@@ -311,8 +311,9 @@ class LLMStreamingClient:
     def _build_contents(
         self,
         text: str,
-        history: Optional[List[Dict[str, str]]]
-    ) -> List[Dict[str, str]]:
+        history: Optional[List[Dict[str, str]]],
+        files: Optional[List[Dict[str, Any]]] = None
+    ) -> List[Dict[str, Any]]:
         contents = []
         
         processed_history, _ = self._build_conversation_context(history)
@@ -320,14 +321,50 @@ class LLMStreamingClient:
         if processed_history:
             for item in processed_history:
                 normalized_role = self._normalize_role(item["role"])
-                contents.append({
-                    "role": normalized_role,
-                    "parts": [{"text": item["content"]}]
-                })
+                parts = []
+                
+                # Add text part
+                if item.get("content"):
+                    parts.append({"text": item["content"]})
+                
+                # Add file parts if they exist in history
+                if item.get("files"):
+                    for file_data in item.get("files", []):
+                        if file_data.get("inline_data"):
+                            parts.append({
+                                "inline_data": {
+                                    "mime_type": file_data["inline_data"]["mime_type"],
+                                    "data": file_data["inline_data"]["data"]
+                                }
+                            })
+                
+                if parts:
+                    contents.append({
+                        "role": normalized_role,
+                        "parts": parts
+                    })
 
+        # Build the current message parts
+        current_parts = []
+        
+        # Add files first if provided
+        if files:
+            for file_data in files:
+                if file_data.get("inline_data"):
+                    current_parts.append({
+                        "inline_data": {
+                            "mime_type": file_data["inline_data"]["mime_type"],
+                            "data": file_data["inline_data"]["data"]
+                        }
+                    })
+        
+        # Add text part
+        if text:
+            current_parts.append({"text": text})
+        
         contents.append({
             "role": "user",
-            "parts": [{"text": text}]
+            "parts": current_parts
         })
 
         return contents
@@ -337,13 +374,14 @@ class LLMStreamingClient:
         text: str,
         history: Optional[List[Dict[str, str]]] = None,
         user_id: Optional[int] = None,
-        db: Optional[Session] = None
+        db: Optional[Session] = None,
+        files: Optional[List[Dict[str, Any]]] = None
     ) -> Iterator[str]:
         try:
             client = self._get_client()
 
             system_instruction = self._build_system_instruction(user_id, db)
-            contents = self._build_contents(text, history)
+            contents = self._build_contents(text, history, files)
 
             response_stream = client.models.generate_content_stream(
                 model=config_manager.model_pro,
@@ -639,9 +677,10 @@ def stream_chat_response(
     text: str,
     history: Optional[List[Dict[str, Any]]] = None,
     user_id: Optional[int] = None,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    files: Optional[List[Dict[str, Any]]] = None
 ) -> Iterator[str]:
-    return llm_client.stream_response(text, history, user_id, db)
+    return llm_client.stream_response(text, history, user_id, db, files)
 
 def generate_initial_call_response(
     text: str,

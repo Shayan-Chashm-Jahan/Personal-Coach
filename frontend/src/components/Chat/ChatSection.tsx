@@ -4,6 +4,12 @@ import ReactMarkdown from "react-markdown";
 interface Message {
   text: string;
   sender: "user" | "coach";
+  files?: Array<{
+    name: string;
+    type: string;
+    url?: string;
+    data?: string;
+  }>;
 }
 
 interface HistoryItem {
@@ -55,7 +61,9 @@ export default function ChatSection({
 }: ChatSectionProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (!isLoading && inputRef.current) {
@@ -135,19 +143,42 @@ export default function ChatSection({
 
   const streamResponse = async (
     messageText: string,
-    conversationHistory: HistoryItem[]
+    conversationHistory: HistoryItem[],
+    files?: File[]
   ): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify({
-        message: messageText,
-        history: conversationHistory,
-      }),
-    });
+    let response: Response;
+
+    // Use multimodal endpoint if files are present
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append("message", messageText);
+      formData.append("chat_id", currentChatId?.toString() || "0");
+      formData.append("history", JSON.stringify(conversationHistory));
+      
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      response = await fetch(`${API_BASE_URL}/api/chat/stream-multimodal`, {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+        },
+        body: formData,
+      });
+    } else {
+      response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          message: messageText,
+          history: conversationHistory,
+        }),
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -206,7 +237,7 @@ export default function ChatSection({
   };
 
   const sendMessage = async (): Promise<void> => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() && selectedFiles.length === 0) return;
 
     const messageText = inputValue;
     const conversationHistory = buildConversationHistory();
@@ -219,10 +250,25 @@ export default function ChatSection({
     }
 
     const isFirstMessageInChat = messages.length === 0;
+    const filesToSend = [...selectedFiles];
 
     setInputValue("");
+    setSelectedFiles([]);
     setIsLoading(true);
-    await addMessage(messageText, "user");
+    
+    // Add message with files info
+    const userMessage: Message = { 
+      text: messageText, 
+      sender: "user",
+      files: filesToSend.map(file => ({
+        name: file.name,
+        type: file.type,
+        url: URL.createObjectURL(file)
+      }))
+    };
+    
+    setMessages((prev) => [...prev, userMessage]);
+    await saveMessage(userMessage);
 
     setMessages((prev) => [...prev, { text: "", sender: "coach" }]);
 
@@ -233,7 +279,7 @@ export default function ChatSection({
 
     try {
       setMessages((prev) => prev.slice(0, -1));
-      await streamResponse(messageText, conversationHistory);
+      await streamResponse(messageText, conversationHistory, filesToSend);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to send message";
@@ -275,7 +321,7 @@ export default function ChatSection({
     const textarea = e.target;
     textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
-    const maxHeight = 120;
+    const maxHeight = 300;
 
     if (scrollHeight <= maxHeight) {
       textarea.style.height = scrollHeight + "px";
@@ -287,12 +333,45 @@ export default function ChatSection({
   const handleClearChat = (): void => {
     setShowClearConfirm(false);
     clearChat();
+    setSelectedFiles([]);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(prev => [...prev, ...files]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (index: number): void => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const renderMessage = (message: Message, index: number) => (
     <div key={index} className={`message-wrapper ${message.sender}`}>
       <div className={`message ${message.sender}`}>
         <div className="message-content">
+          {message.files && message.files.length > 0 && (
+            <div className="message-files">
+              {message.files.map((file, fileIndex) => (
+                <div key={fileIndex} className="message-file">
+                  {file.type.startsWith("image/") && file.url ? (
+                    <img 
+                      src={file.url} 
+                      alt={file.name} 
+                      className="message-file-image"
+                    />
+                  ) : (
+                    <div className="message-file-info">
+                      <span className="message-file-icon">📎</span>
+                      <span className="message-file-name">{file.name}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           {message.sender === "coach" ? (
             message.text ? (
               <ReactMarkdown>{message.text}</ReactMarkdown>
@@ -307,7 +386,7 @@ export default function ChatSection({
               </div>
             )
           ) : (
-            <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
+            message.text && <div style={{ whiteSpace: "pre-wrap" }}>{message.text}</div>
           )}
         </div>
         <div className="message-timestamp">
@@ -322,8 +401,49 @@ export default function ChatSection({
   );
 
   const renderChatInput = () => (
-    <div className="input-container">
+    <div className={`input-container ${selectedFiles.length > 0 ? 'has-files' : ''}`}>
+      {selectedFiles.length > 0 && (
+        <div className="selected-files">
+          {selectedFiles.map((file, index) => (
+            <div key={index} className="selected-file">
+              {file.type.startsWith("image/") ? (
+                <img 
+                  src={URL.createObjectURL(file)} 
+                  alt={file.name} 
+                  className="selected-file-preview"
+                />
+              ) : (
+                <div className="selected-file-icon">📎</div>
+              )}
+              <span className="selected-file-name">{file.name}</span>
+              <button 
+                className="selected-file-remove"
+                onClick={() => removeFile(index)}
+                aria-label="Remove file"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="input-field">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+          accept="image/*,.pdf,.doc,.docx,.txt"
+        />
+        <button
+          className="file-upload-button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          aria-label="Upload file"
+        >
+          📎
+        </button>
         <textarea
           ref={inputRef}
           value={inputValue}
@@ -333,11 +453,11 @@ export default function ChatSection({
           className="message-input"
           disabled={isLoading}
           rows={1}
-          style={{ resize: "none", overflow: "hidden" }}
+          style={{ resize: "none" }}
         />
         <button
           onClick={sendMessage}
-          disabled={isLoading || !inputValue.trim()}
+          disabled={isLoading || (!inputValue.trim() && selectedFiles.length === 0)}
           className="send-button"
         >
           {isLoading ? (

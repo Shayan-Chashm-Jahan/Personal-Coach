@@ -21,10 +21,11 @@ html, body {
 
 .app-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   width: 100vw;
   background: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -119,9 +120,10 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   margin-left: 300px;
   background: #ffffff;
+  overflow: hidden;
 }
 
 .section-header {
@@ -202,16 +204,14 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 100px);
-  padding: 1rem;
+  min-height: 0;
+  padding: 0;
   background: #ffffff;
-  overflow-y: auto;
 }
 
 @media (max-width: 1024px) {
   .section-content {
-    min-height: calc(100vh - 80px);
-    padding: 0.75rem;
+    min-height: 0;
   }
 }
 
@@ -242,11 +242,12 @@ html, body {
 
 .messages-container {
   flex: 1;
-  padding: 0.75rem;
+  padding: 1rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 0;
 }
 
 @media (max-width: 1024px) {
@@ -819,7 +820,6 @@ html, body {
 .sidebar-footer {
   margin-top: auto;
   padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .logout-button {
@@ -891,42 +891,54 @@ html, body {
 }
 
 .input-container {
-  padding: 0.75rem;
-  background: transparent;
-  margin-top: auto;
+  padding: 8px 0;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  width: 100%;
+  flex: 0 0 auto;
+  height: auto;
 }
 
 .input-field {
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 0 12px;
   display: flex;
-  align-items: stretch;
-  background: #ffffff;
-  border: 2px solid #e5e5e5;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  align-items: flex-end;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 44px;
 }
 
 .input-field:focus-within {
-  border-color: #4a5568;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  /* No focus effect needed */
 }
 
 .message-input {
   flex: 1;
-  padding: 1rem 1.25rem;
+  padding: 11px 12px;
   border: none;
   background: transparent;
-  color: #333333;
-  font-size: 1rem;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.4;
   outline: none;
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  resize: none;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .message-input::placeholder {
-  color: #999999;
+  color: #9ca3af;
+  font-size: 15px;
 }
 
 .message-input:disabled {
@@ -970,22 +982,24 @@ html, body {
 }
 
 .send-button {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: transparent;
-  color: #4a5568;
+  color: #1a202c;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 12px;
+  margin: 2px;
+  border-radius: 0;
   position: relative;
+  flex-shrink: 0;
 }
 
 .send-button:hover:not(:disabled) {
-  transform: scale(1.1);
+  color: #1a202c;
 }
 
 .interview-pending-container {
@@ -1167,9 +1181,8 @@ html, body {
 }
 
 .send-button:disabled {
-  opacity: 0.3;
+  color: #cbd5e0;
   cursor: not-allowed;
-  transform: none;
 }
 
 .send-loading {
@@ -1567,9 +1580,6 @@ html, body {
   background: #1a202c;
   border-color: #1a202c;
   transform: translateY(-1px);
-}
-  margin: 0;
-  outline: none;
 }
 
 .video-card {
@@ -3302,4 +3312,196 @@ html, body {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+/* File Upload Styles */
+.file-upload-button {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #1a202c;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.3rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  outline: none;
+}
+
+.file-upload-button:focus {
+  outline: none;
+}
+
+.file-upload-button:hover:not(:disabled) {
+  /* No hover effect - stays transparent */
+}
+
+.file-upload-button:disabled {
+  color: #cbd5e0;
+  cursor: not-allowed;
+}
+
+/* Selected Files Preview */
+.selected-files {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: #4a5568;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.selected-file-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.selected-file-icon {
+  font-size: 1.2rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  border-radius: 4px;
+}
+
+.selected-file-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-file-remove {
+  background: none;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+}
+
+.selected-file-remove:hover {
+  background: rgba(229, 62, 62, 0.1);
+  color: #c53030;
+}
+
+/* Message Files Display */
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.message-file {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.message-file-image {
+  max-width: 300px;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+.message-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: #4a5568;
+}
+
+.message-file-icon {
+  font-size: 1.1rem;
+}
+
+.message-file-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Adjust input field when files are selected */
+.input-container.has-files .input-field {
+  /* No special styling needed for flat design */
+}
+
+/* Telegram-style send button icon */
+.send-button::before {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231a202c' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 19l9 2-9-18-9 18 9-2zm0 0v-8'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform: rotate(45deg) translateX(-1px);
+}
+
+/* Hide the emoji placeholder in send button */
+.send-button {
+  font-size: 0;
+}
+
+/* Active send button state */
+.send-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.message-input::-webkit-scrollbar {
+  display: none;
+}
+
+/* Input field shadow on hover */
+.input-field:hover:not(:focus-within) {
+  /* No hover effect needed */
+}
+
+/* File upload button active state */
+.file-upload-button:active {
+  transform: scale(0.95);
 }
