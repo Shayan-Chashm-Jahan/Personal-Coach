@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import ChatSection from './components/Chat/ChatSection'
 import GoalsSection from './components/Goals/GoalsSection'
-import NotesSection from './components/Notes/NotesSection'
 import Material from './components/Material/Material'
 import Sidebar from './components/Sidebar/Sidebar'
 import ContextMenu from './components/ContextMenu/ContextMenu'
@@ -15,7 +14,6 @@ const API_BASE_URL = 'http://localhost:8000'
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'coach-notes',
   MATERIAL: 'material'
 } as const
 
@@ -31,11 +29,6 @@ interface Chat {
   updatedAt: string
 }
 
-interface Memory {
-  id: string
-  content: string
-  timestamp: string
-}
 
 interface Notification {
   id: string
@@ -51,8 +44,6 @@ function AppRoutes() {
   const [inputValue, setInputValue] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [activeSection, setActiveSection] = useState<string>('')
-  const [memories, setMemories] = useState<Memory[]>([])
-  const [memoriesLoading, setMemoriesLoading] = useState<boolean>(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [authLoading, setAuthLoading] = useState<boolean>(true)
   const [isLogin, setIsLogin] = useState<boolean>(true)
@@ -73,9 +64,6 @@ function AppRoutes() {
   const [initialCallCompleted, setInitialCallCompleted] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (activeSection === SECTIONS.NOTES) {
-      fetchMemories()
-    }
     if (activeSection === SECTIONS.GOALS && isAuthenticated) {
       fetchGoals()
     }
@@ -119,8 +107,6 @@ function AppRoutes() {
       setActiveSection(SECTIONS.CHAT)
     } else if (path === '/goals') {
       setActiveSection(SECTIONS.GOALS)
-    } else if (path === '/coach-notes') {
-      setActiveSection(SECTIONS.NOTES)
     } else if (path.startsWith('/material')) {
       setActiveSection(SECTIONS.MATERIAL)
     } else if (path === '/chat' || path === '/') {
@@ -221,39 +207,6 @@ function AppRoutes() {
     }
   }
 
-  const fetchMemories = async (): Promise<void> => {
-    try {
-      setMemoriesLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/memories`, {
-        method: 'GET',
-        headers: getAuthHeaders()
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setMemories(data.memories || [])
-      }
-    } catch (error) {
-      showNotification('Failed to fetch memories', 'error')
-    } finally {
-      setMemoriesLoading(false)
-    }
-  }
-
-  const deleteMemory = async (memoryId: string): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/memories/${memoryId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      })
-
-      if (response.ok) {
-        setMemories(prev => prev.filter(memory => memory.id !== memoryId))
-      }
-    } catch (error) {
-      showNotification('Failed to delete memory', 'error')
-    }
-  }
 
 
   const saveMessage = async (message: Message): Promise<void> => {
@@ -639,7 +592,6 @@ function AppRoutes() {
     const titles: Record<string, string> = {
       [SECTIONS.CHAT]: 'Chat',
       [SECTIONS.GOALS]: 'Goals',
-      [SECTIONS.NOTES]: 'Coach Notes',
       [SECTIONS.MATERIAL]: 'Material'
     }
     return titles[activeSection] || 'Chat'
@@ -650,8 +602,6 @@ function AppRoutes() {
       navigate('/chat')
     } else if (section === SECTIONS.GOALS) {
       navigate('/goals')
-    } else if (section === SECTIONS.NOTES) {
-      navigate('/coach-notes')
     } else if (section === SECTIONS.MATERIAL) {
       if (location.pathname.startsWith('/material/')) {
         navigate(location.pathname)
@@ -694,15 +644,6 @@ function AppRoutes() {
             goals={goals}
             goalsLoading={goalsLoading}
             deleteGoal={deleteGoal}
-            onContextMenu={handleGoalContextMenu}
-          />
-        )
-      case SECTIONS.NOTES:
-        return (
-          <NotesSection
-            memories={memories}
-            memoriesLoading={memoriesLoading}
-            deleteMemory={deleteMemory}
             onContextMenu={handleGoalContextMenu}
           />
         )
@@ -922,7 +863,6 @@ function App() {
         <Route path="/chat" element={<AppRoutes />} />
         <Route path="/chat/:chat_id" element={<AppRoutes />} />
         <Route path="/goals" element={<AppRoutes />} />
-        <Route path="/coach-notes" element={<AppRoutes />} />
         <Route path="/material" element={<AppRoutes />} />
         <Route path="/material/videos" element={<AppRoutes />} />
         <Route path="/material/books" element={<AppRoutes />} />

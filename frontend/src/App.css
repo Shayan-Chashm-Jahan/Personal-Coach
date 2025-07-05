@@ -526,8 +526,11 @@ html, body {
 .memories-container {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0;
   padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .memory-card {
@@ -820,6 +823,37 @@ html, body {
 .sidebar-footer {
   margin-top: auto;
   padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
 }
 
 .logout-button {
@@ -2110,6 +2144,126 @@ html, body {
   background: #1a202c;
   border-color: #1a202c;
   transform: translateY(-1px);
+}
+
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.settings-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 1000px;
+  max-width: 90vw;
+  height: 600px;
+  max-height: 85vh;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666666;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  z-index: 100;
+  outline: none;
+}
+
+.settings-modal-close:hover {
+  background: #f0f0f0;
+  color: #333333;
+}
+
+.settings-modal-content {
+  padding: 0 40px 40px 40px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.settings-header {
+  padding: 40px 40px 20px 40px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-header h2 {
+  margin: 0 0 20px 0;
+  color: #1a202c;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 24px;
+}
+
+.settings-tab {
+  background: none;
+  border: none;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #718096;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.settings-tab:hover {
+  color: #2d3748;
+}
+
+.settings-tab.active {
+  color: #2d3748;
+}
+
+.settings-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2d3748;
+}
+
+.settings-tab-content {
+  padding: 20px 0;
+}
+
+.memory-item {
+  padding: 12px 0;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: transparent;
+}
+
+.memory-item:last-child {
+  border-bottom: none;
 }
 
 .feedback-button {

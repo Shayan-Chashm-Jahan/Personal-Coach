@@ -1,4 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom'
+import { useState } from 'react'
+import Settings from '../Settings/Settings'
 
 interface Chat {
   id: string
@@ -20,7 +22,6 @@ interface SidebarProps {
 const SECTIONS = {
   CHAT: 'chat',
   GOALS: 'goals',
-  NOTES: 'coach-notes',
   MATERIAL: 'material'
 } as const
 
@@ -34,6 +35,7 @@ export default function Sidebar({
   onContextMenu
 }: SidebarProps) {
   const navigate = useNavigate()
+  const [showSettings, setShowSettings] = useState(false)
 
   const getRouteForSection = (section: string): string => {
     switch (section) {
@@ -41,8 +43,6 @@ export default function Sidebar({
         return '/chat'
       case SECTIONS.GOALS:
         return '/goals'
-      case SECTIONS.NOTES:
-        return '/coach-notes'
       case SECTIONS.MATERIAL:
         return '/material'
       default:
@@ -109,15 +109,28 @@ export default function Sidebar({
       <nav className="sidebar-nav">
         {renderNavigationItem(SECTIONS.CHAT, 'Chat')}
         {renderNavigationItem(SECTIONS.GOALS, 'Goals')}
-        {renderNavigationItem(SECTIONS.NOTES, 'Coach Notes')}
         {renderNavigationItem(SECTIONS.MATERIAL, 'Material')}
       </nav>
       {renderChatList()}
       <div className="sidebar-footer">
-        <button className="logout-button" onClick={logout}>
-          Logout
+        <button className="icon-button logout-icon" onClick={logout} title="Logout">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M15 21H19a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <polyline points="8 17 3 12 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="3" y1="12" x2="15" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <button className="icon-button settings-icon" onClick={() => setShowSettings(true)} title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
       </div>
+
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   )
 }
