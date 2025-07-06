@@ -949,9 +949,6 @@ html, body {
   min-height: 44px;
 }
 
-.input-field:focus-within {
-  /* No focus effect needed */
-}
 
 .message-input {
   flex: 1;
@@ -1437,10 +1434,12 @@ html, body {
 .material-content {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
   background: #ffffff;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .material-empty {
@@ -2109,7 +2108,6 @@ html, body {
   flex: 1;
 }
 
-/* Feedback System Styles */
 .video-actions {
   display: flex;
   gap: 12px;
@@ -2206,13 +2204,6 @@ html, body {
 .settings-header {
   padding: 40px 40px 20px 40px;
   border-bottom: 1px solid #e5e7eb;
-}
-
-.settings-header h2 {
-  margin: 0 0 20px 0;
-  color: #1a202c;
-  font-size: 24px;
-  font-weight: 600;
 }
 
 .settings-tabs {
@@ -2439,7 +2430,6 @@ html, body {
   transform: scale(1.15);
 }
 
-/* Rating-specific colors */
 .rating-button:nth-child(1):hover .rating-icon,
 .rating-button:nth-child(1).selected {
   color: #e53e3e;
@@ -2716,7 +2706,6 @@ html, body {
   }
 }
 
-/* Goals Page Styles */
 .goals-empty-state {
   flex: 1;
   display: flex;
@@ -2992,7 +2981,6 @@ html, body {
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
 }
 
-/* New Goal Modal Styles */
 .goal-modal-content {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-radius: 20px;
@@ -3489,7 +3477,6 @@ html, body {
   transform: none;
 }
 
-/* File Upload Styles */
 .file-upload-button {
   background: transparent;
   border: none;
@@ -3512,16 +3499,12 @@ html, body {
   outline: none;
 }
 
-.file-upload-button:hover:not(:disabled) {
-  /* No hover effect - stays transparent */
-}
 
 .file-upload-button:disabled {
   color: #cbd5e0;
   cursor: not-allowed;
 }
 
-/* Selected Files Preview */
 .selected-files {
   display: flex;
   gap: 8px;
@@ -3597,7 +3580,6 @@ html, body {
   color: #c53030;
 }
 
-/* Message Files Display */
 .message-files {
   display: flex;
   flex-wrap: wrap;
@@ -3639,12 +3621,7 @@ html, body {
   white-space: nowrap;
 }
 
-/* Adjust input field when files are selected */
-.input-container.has-files .input-field {
-  /* No special styling needed for flat design */
-}
 
-/* Telegram-style send button icon */
 .send-button::before {
   content: '';
   display: block;
@@ -3657,12 +3634,10 @@ html, body {
   transform: rotate(45deg) translateX(-1px);
 }
 
-/* Hide the emoji placeholder in send button */
 .send-button {
   font-size: 0;
 }
 
-/* Active send button state */
 .send-button:active:not(:disabled) {
   transform: scale(0.95);
 }
@@ -3671,12 +3646,7 @@ html, body {
   display: none;
 }
 
-/* Input field shadow on hover */
-.input-field:hover:not(:focus-within) {
-  /* No hover effect needed */
-}
 
-/* File upload button active state */
 .file-upload-button:active {
   transform: scale(0.95);
 }

@@ -522,7 +522,6 @@ export default function Material() {
           [feedbackKey]: data.feedback
         }))
         
-        // Close modal and reset form
         setFeedbackModal({
           isOpen: false,
           materialType: 'video',
@@ -579,7 +578,6 @@ export default function Material() {
         const booksData = await booksResponse.json()
         const videosData = await videosResponse.json()
         
-        // Fetch feedbacks for all materials
         await fetchAllFeedbacks(booksData.books, videosData.videos)
         
         await Promise.all([

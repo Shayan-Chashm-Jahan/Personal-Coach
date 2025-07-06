@@ -117,8 +117,8 @@ class MaterialFeedback(Base):
     __tablename__ = "material_feedbacks"
 
     id = Column(Integer, primary_key=True, index=True)
-    material_type = Column(String(20), nullable=False)  # 'book' or 'video'
-    rating = Column(Integer, nullable=False)  # 1-5
+    material_type = Column(String(20), nullable=False)
+    rating = Column(Integer, nullable=False)
     review = Column(Text, nullable=True)
     completed = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

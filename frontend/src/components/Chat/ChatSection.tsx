@@ -148,7 +148,6 @@ export default function ChatSection({
   ): Promise<void> => {
     let response: Response;
 
-    // Use multimodal endpoint if files are present
     if (files && files.length > 0) {
       const formData = new FormData();
       formData.append("message", messageText);
@@ -256,7 +255,6 @@ export default function ChatSection({
     setSelectedFiles([]);
     setIsLoading(true);
     
-    // Add message with files info
     const userMessage: Message = { 
       text: messageText, 
       sender: "user",

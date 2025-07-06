@@ -166,7 +166,6 @@ export default function Settings({ onClose }: SettingsProps) {
         </button>
         
         <div className="settings-header">
-          <h2>Settings</h2>
           <div className="settings-tabs">
             <button
               className={`settings-tab ${activeTab === 'memories' ? 'active' : ''}`}

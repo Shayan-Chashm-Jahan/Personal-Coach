@@ -67,9 +67,9 @@ class BookDiscussionRequest(BaseModel):
     history: List[HistoryItem] = []
 
 class MaterialFeedbackCreate(BaseModel):
-    material_type: str  # 'book' or 'video'
+    material_type: str
     material_id: int
-    rating: int  # 1-5
+    rating: int
     review: Optional[str] = None
     completed: bool = True
 
@@ -1030,7 +1030,6 @@ class ChatAPI:
                 conversation_text += f"{role}: {msg.content}\n"
 
             if conversation_text.strip():
-                # Get user's previous feedback
                 from models import MaterialFeedback
                 feedbacks = db.query(MaterialFeedback).filter(
                     MaterialFeedback.user_id == current_user.id
@@ -1349,7 +1348,6 @@ class ChatAPI:
         try:
             from models import MaterialFeedback, Book, Video
             
-            # Validate material exists and belongs to user
             if feedback.material_type == "book":
                 material = db.query(Book).filter(
                     Book.id == feedback.material_id,
@@ -1367,7 +1365,6 @@ class ChatAPI:
             else:
                 raise HTTPException(status_code=400, detail="Invalid material type")
             
-            # Check if feedback already exists
             existing = db.query(MaterialFeedback).filter(
                 MaterialFeedback.user_id == current_user.id,
                 MaterialFeedback.material_type == feedback.material_type
@@ -1379,7 +1376,6 @@ class ChatAPI:
             existing = existing.first()
             
             if existing:
-                # Update existing feedback
                 existing.rating = feedback.rating
                 existing.review = feedback.review
                 existing.completed = feedback.completed
@@ -1395,7 +1391,6 @@ class ChatAPI:
                     "updated_at": existing.updated_at.isoformat()
                 }}
             
-            # Create new feedback
             new_feedback = MaterialFeedback(
                 user_id=current_user.id,
                 material_type=feedback.material_type,

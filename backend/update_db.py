@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 from models import Base, engine, create_tables
 

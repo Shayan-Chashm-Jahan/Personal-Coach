@@ -347,11 +347,9 @@ class LLMStreamingClient:
                 normalized_role = self._normalize_role(item["role"])
                 parts = []
                 
-                # Add text part
                 if item.get("content"):
                     parts.append({"text": item["content"]})
                 
-                # Add file parts if they exist in history
                 if item.get("files"):
                     for file_data in item.get("files", []):
                         if file_data.get("inline_data"):
@@ -368,10 +366,8 @@ class LLMStreamingClient:
                         "parts": parts
                     })
 
-        # Build the current message parts
         current_parts = []
         
-        # Add files first if provided
         if files:
             for file_data in files:
                 if file_data.get("inline_data"):
@@ -382,7 +378,6 @@ class LLMStreamingClient:
                         }
                     })
         
-        # Add text part
         if text:
             current_parts.append({"text": text})
         
