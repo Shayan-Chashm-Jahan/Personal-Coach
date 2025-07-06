@@ -262,11 +262,11 @@ class LLMStreamingClient:
             
             recent_memories = memories[-15:] if len(memories) > 15 else memories
             
-            context_parts = ["=== COACH NOTES & INSIGHTS ==="]
+            context_parts = ["=== MEMORIES & INSIGHTS ==="]
             for memory in recent_memories:
                 context_parts.append(f"• {memory['content']}")
 
-            context_parts.append("=== END COACH NOTES ===")
+            context_parts.append("=== END MEMORIES ===")
             return "\n".join(context_parts)
         except Exception as e:
             print(f"An error occurred: {e}")

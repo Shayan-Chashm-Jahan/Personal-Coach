@@ -14,7 +14,7 @@ interface SettingsProps {
 const API_BASE_URL = 'http://localhost:8000'
 
 export default function Settings({ onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState('coach-notes')
+  const [activeTab, setActiveTab] = useState('memories')
   const [memories, setMemories] = useState<Memory[]>([])
   const [memoriesLoading, setMemoriesLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -24,17 +24,14 @@ export default function Settings({ onClose }: SettingsProps) {
   }>({ isOpen: false })
 
   useEffect(() => {
-    if (activeTab === 'coach-notes') {
+    if (activeTab === 'memories') {
       fetchMemories()
     }
   }, [activeTab])
 
   const fetchMemories = async () => {
     const token = localStorage.getItem('auth_token')
-    if (!token) {
-      console.log('No token found')
-      return
-    }
+    if (!token) return
 
     setMemoriesLoading(true)
     try {
@@ -44,14 +41,9 @@ export default function Settings({ onClose }: SettingsProps) {
         }
       })
 
-      console.log('Response status:', response.status)
-      
       if (response.ok) {
         const data = await response.json()
-        console.log('Memories data:', data)
         setMemories(data.memories || [])
-      } else {
-        console.error('Failed to fetch memories:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error fetching memories:', error)
@@ -104,15 +96,13 @@ export default function Settings({ onClose }: SettingsProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [confirmDelete.isOpen, confirmDelete.memoryId])
 
-  const renderCoachNotes = () => {
-    console.log('Rendering coach notes, loading:', memoriesLoading, 'memories:', memories)
-    
+  const renderMemories = () => {
     if (memoriesLoading) {
       return (
         <div className="settings-tab-content">
           <div className="empty-state">
             <div className="loading-spinner"></div>
-            <p>Loading your coach notes...</p>
+            <p>Loading your memories...</p>
           </div>
         </div>
       )
@@ -126,7 +116,7 @@ export default function Settings({ onClose }: SettingsProps) {
             color: "#666",
             margin: "0",
           }}>
-            No notes yet.
+            No memories yet.
           </p>
         </div>
       )
@@ -139,18 +129,25 @@ export default function Settings({ onClose }: SettingsProps) {
             <div
               key={memory.id}
               className="memory-item"
-              onContextMenu={(e) => {
-                e.preventDefault()
-                setConfirmDelete({
+            >
+              <div style={{ color: "#333", lineHeight: "1.5", flex: 1 }}>
+                <ReactMarkdown>{memory.content}</ReactMarkdown>
+              </div>
+              <button
+                className="memory-delete-button"
+                onClick={() => setConfirmDelete({
                   isOpen: true,
                   memoryId: memory.id,
                   memoryContent: memory.content
-                })
-              }}
-            >
-              <div style={{ color: "#333", lineHeight: "1.5" }}>
-                <ReactMarkdown>{memory.content}</ReactMarkdown>
-              </div>
+                })}
+                title="Delete memory"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
           ))}
         </div>
@@ -172,23 +169,23 @@ export default function Settings({ onClose }: SettingsProps) {
           <h2>Settings</h2>
           <div className="settings-tabs">
             <button
-              className={`settings-tab ${activeTab === 'coach-notes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('coach-notes')}
+              className={`settings-tab ${activeTab === 'memories' ? 'active' : ''}`}
+              onClick={() => setActiveTab('memories')}
             >
-              Coach Notes
+              Memories
             </button>
           </div>
         </div>
 
         <div className="settings-modal-content">
-          {activeTab === 'coach-notes' && renderCoachNotes()}
+          {activeTab === 'memories' && renderMemories()}
         </div>
 
         {confirmDelete.isOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>Delete Note</h3>
+                <h3>Delete Memory</h3>
               </div>
               <div className="modal-body">
                 <p>This action cannot be undone.</p>
@@ -204,7 +201,7 @@ export default function Settings({ onClose }: SettingsProps) {
                   onClick={handleConfirmDelete}
                   className="modal-button danger"
                 >
-                  Delete Note
+                  Delete Memory
                 </button>
               </div>
             </div>
