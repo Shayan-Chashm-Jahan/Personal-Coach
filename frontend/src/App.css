@@ -1796,6 +1796,12 @@ html, body {
   flex-direction: column;
   gap: 16px;
   direction: rtl;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-messages::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-messages > * {

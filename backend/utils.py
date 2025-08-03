@@ -6,9 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Dict, List, Any
 
-from google import genai
-from google.genai import types
-from google.genai.types import HttpOptions
+from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from config import config_manager
@@ -37,21 +35,18 @@ class LLMStreamingClient:
         self._summary_cache_time = 0
         self._initialized = True
 
-    def _get_client(self) -> genai.Client:
+    def _get_client(self) -> OpenAI:
         if self.client is None:
-            vertex_config = config_manager.get_vertex_ai_config()
-            self.client = genai.Client(
-                http_options=HttpOptions(api_version="v1"),
-                **vertex_config
-            )
+            openai_config = config_manager.get_openai_config()
+            self.client = OpenAI(**openai_config)
         return self.client
 
     def _normalize_role(self, role: str) -> str:
         role_mapping = {
-            "assistant": "model",
-            "system": "user",
+            "assistant": "assistant",
+            "system": "system",
             "user": "user",
-            "model": "model"
+            "model": "assistant"
         }
         return role_mapping.get(role, "user")
 
@@ -94,15 +89,13 @@ class LLMStreamingClient:
         )
 
         client = self._get_client()
-        response = client.models.generate_content(
+        response = client.chat.completions.create(
             model=config_manager.model_pro,
-            contents=summary_prompt,
-            config={
-                "temperature": 0.3
-            }
+            messages=[{"role": "user", "content": summary_prompt}],
+            temperature=0.3
         )
 
-        return response.text
+        return response.choices[0].message.content
 
     def _extract_json_from_response(self, response_text: str) -> dict:
         text = response_text.strip()
@@ -166,15 +159,13 @@ class LLMStreamingClient:
         try:
             client = self._get_client()
 
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=config_manager.model_pro,
-                contents=memory_prompt,
-                config={
-                    "temperature": 0.2
-                }
+                messages=[{"role": "user", "content": memory_prompt}],
+                temperature=0.2
             )
 
-            content = response.text.strip() if response and response.text else ""
+            content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
             if content.upper() == "NONE" or not content:
                 return []
@@ -332,61 +323,38 @@ class LLMStreamingClient:
         
         return history, existing_summary
     
-    def _build_contents(
+    def _build_messages(
         self,
         text: str,
         history: Optional[List[Dict[str, str]]],
-        files: Optional[List[Dict[str, Any]]] = None
+        files: Optional[List[Dict[str, Any]]] = None,
+        system_instruction: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        contents = []
+        messages = []
+        
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
         
         processed_history, _ = self._build_conversation_context(history)
         
         if processed_history:
             for item in processed_history:
                 normalized_role = self._normalize_role(item["role"])
-                parts = []
+                content = item.get("content", "")
                 
-                if item.get("content"):
-                    parts.append({"text": item["content"]})
-                
-                if item.get("files"):
-                    for file_data in item.get("files", []):
-                        if file_data.get("inline_data"):
-                            parts.append({
-                                "inline_data": {
-                                    "mime_type": file_data["inline_data"]["mime_type"],
-                                    "data": file_data["inline_data"]["data"]
-                                }
-                            })
-                
-                if parts:
-                    contents.append({
+                if content:
+                    messages.append({
                         "role": normalized_role,
-                        "parts": parts
-                    })
-
-        current_parts = []
-        
-        if files:
-            for file_data in files:
-                if file_data.get("inline_data"):
-                    current_parts.append({
-                        "inline_data": {
-                            "mime_type": file_data["inline_data"]["mime_type"],
-                            "data": file_data["inline_data"]["data"]
-                        }
+                        "content": content
                     })
         
         if text:
-            current_parts.append({"text": text})
+            messages.append({
+                "role": "user",
+                "content": text
+            })
         
-        contents.append({
-            "role": "user",
-            "parts": current_parts
-        })
-
-        return contents
+        return messages
 
     def stream_response(
         self,
@@ -400,23 +368,18 @@ class LLMStreamingClient:
             client = self._get_client()
 
             system_instruction = self._build_system_instruction(user_id, db)
-            contents = self._build_contents(text, history, files)
+            messages = self._build_messages(text, history, files, system_instruction)
 
-            response_stream = client.models.generate_content_stream(
+            response_stream = client.chat.completions.create(
                 model=config_manager.model_pro,
-                contents=contents,
-                config={
-                    "tools": [{"googleSearch": {}}],
-                    "systemInstruction": {
-                        "parts": [{"text": system_instruction}]
-                    },
-                    "temperature": config_manager.temperature
-                }
+                messages=messages,
+                temperature=config_manager.temperature,
+                stream=True
             )
 
             for chunk in response_stream:
-                if chunk.text:
-                    yield chunk.text
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
 
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -433,25 +396,18 @@ class LLMStreamingClient:
         try:
             client = self._get_client()
 
-            contents = self._build_contents(text, history)
+            messages = self._build_messages(text, history)
 
             if prompt:
-                system_content = types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=prompt)]
-                )
-                contents.insert(0, system_content)
+                messages.insert(0, {"role": "system", "content": prompt})
             
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=config_manager.model_pro,
-                contents=contents,
-                config={
-                    "tools": [{"googleSearch": {}}],
-                    "temperature": config_manager.temperature
-                }
+                messages=messages,
+                temperature=config_manager.temperature
             )
 
-            response_text = response.text if response and response.text else ""
+            response_text = response.choices[0].message.content if response.choices[0].message.content else ""
             if response_text.strip() == "END":
                 return "It was wonderful getting to know you! I've gathered enough information to prepare the initial materials for your success. I'm confident that together we can achieve something truly great. Let me prepare everything for our journey ahead!"
             return response_text
@@ -527,16 +483,13 @@ class LLMStreamingClient:
                 user_feedback=user_feedback if user_feedback else "No previous feedback available."
             )
 
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=config_manager.model_pro,
-                contents=prompt,
-                config={
-                    "tools": [{"googleSearch": {}}],
-                    "temperature": 0.3
-                }
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
             )
 
-            result = self._extract_json_from_response(response.text)
+            result = self._extract_json_from_response(response.choices[0].message.content)
             
             
             if result.get("videos"):
@@ -586,17 +539,15 @@ class LLMStreamingClient:
             prompt = prompt_template.format(book_title=book_title, author=author)
 
             client = self._get_client()
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=config_manager.model_fast,
-                contents=prompt,
-                config={
-                    "temperature": 0.3
-                }
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
             )
 
 
-            if response and response.text:
-                text = response.text.strip()
+            if response.choices[0].message.content:
+                text = response.choices[0].message.content.strip()
 
                 if text.startswith('```python'):
                     text = text[9:]
@@ -656,7 +607,7 @@ class LLMStreamingClient:
                 for ch in all_chapters
             ])
             
-            prompt = config_manager.book_discussion_prompt.format(
+            system_prompt = config_manager.book_discussion_prompt.format(
                 book_title=book_title,
                 book_author=book_author,
                 current_chapter_title=current_chapter.get('chapter', 'Unknown'),
@@ -665,24 +616,18 @@ class LLMStreamingClient:
                 conversation_context=conversation_context
             )
             
-            contents = [{
-                "role": "user",
-                "parts": [{"text": message}]
-            }]
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ]
             
-            response = client.models.generate_content(
+            response = client.chat.completions.create(
                 model=config_manager.model_fast,
-                contents=contents,
-                config={
-                    "tools": [{"googleSearch": {}}],
-                    "systemInstruction": {
-                        "parts": [{"text": prompt}]
-                    },
-                    "temperature": 0.5
-                }
+                messages=messages,
+                temperature=0.5
             )
             
-            return response.text if response.text else ""
+            return response.choices[0].message.content if response.choices[0].message.content else ""
                     
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -709,4 +654,3 @@ def generate_initial_call_response(
     prompt: str = ""
 ) -> str:
     return llm_client.initial_call_response(text, history, user_id, db, prompt)
-

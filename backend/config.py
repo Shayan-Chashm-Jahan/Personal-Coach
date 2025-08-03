@@ -7,14 +7,13 @@ load_dotenv()
 
 class ConfigManager:
     def __init__(self) -> None:
-        self.project_id = os.getenv("GCP_PROJECT_ID")
-        if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID environment variable is required")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
 
-        self.model_pro = "gemini-2.5-pro"
-        self.model_fast = "gemini-2.5-flash"
-        self.model_super_fast = "gemini-2.0-flash"
-        self.location = "us-central1"
+        self.model_pro = "gpt-4o"
+        self.model_fast = "gpt-4o-mini"
+        self.model_super_fast = "gpt-4o-mini"
         self.temperature = 0.7
         self.max_tokens = 2048
 
@@ -48,11 +47,9 @@ class ConfigManager:
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read().strip()
 
-    def get_vertex_ai_config(self) -> dict:
+    def get_openai_config(self) -> dict:
         return {
-            "vertexai": True,
-            "project": self.project_id,
-            "location": self.location
+            "api_key": self.openai_api_key
         }
 
 

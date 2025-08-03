@@ -131,3 +131,5 @@ uv.lock
 # Conversation memory
 backend/conversation_summary.json
 backend/coach_memories.json
+
+.claude
